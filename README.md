@@ -1,7 +1,7 @@
 ## Requirements
 
 ```bash
-$ conda create -y -n nmt python=3.9
+$ conda create -n nmt -y python=3.10.6
 $ conda activate nmt
 $ pip install -r requirements.txt
 ```
