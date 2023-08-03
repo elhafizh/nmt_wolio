@@ -3,3 +3,6 @@ sklearn-pandas==2.2.0
 torch==2.0.1
 tqdm==4.65.0
 pytest==7.2.2
+black==23.7.0
+isort==5.12.0
+mypy==1.4.1
