@@ -4,4 +4,7 @@ import pandas as pd
 
 
 def download_wolio_dataset(link: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    return
+    sentences, vocabularies = pd.read_excel(
+        link, sheet_name="Sentence Pair"
+    ), pd.read_excel(link, sheet_name="Dictionary")
+    return sentences, vocabularies
