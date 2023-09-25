@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 import torch.nn as nn
 
@@ -16,6 +17,24 @@ class SimpleNN(nn.Module):
         # Apply the linear transformation
         output = self.linear(x)
         return output
+
+
+# Define a simple linear transformation function
+def linear_transformation(input_data, weights, bias):
+    """
+    input_data: Input data as a NumPy array (shape: [batch_size, input_size])
+    weights: Weight matrix as a NumPy array (shape: [input_size, output_size])
+    bias: Bias vector as a NumPy array (shape: [output_size])
+
+    Returns the result of the linear transformation as a NumPy array (shape: [batch_size, output_size]).
+    """
+    # Perform the weighted sum
+    weighted_sum = np.dot(input_data, weights)
+
+    # Add the bias
+    output = weighted_sum + bias
+
+    return output
 
 
 if __name__ == "__main__":
