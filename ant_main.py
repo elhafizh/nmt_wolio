@@ -13,9 +13,7 @@ pp = pprint.PrettyPrinter()
 The Annotated Transformer module
 """
 
-"""nn.Linear"""
-if __name__ == "__main__":
-    """The GAP: SimpleNN"""
+def main_simpleNN():
     # Define the input data (a batch of 3 samples, each with 2 features)
     input_data = torch.tensor(
         [
@@ -80,3 +78,8 @@ if __name__ == "__main__":
     # Print the output
     print("Output of linear_transformation():")
     print(output)
+
+
+if __name__ == "__main__":
+    """The GAP: nn.Linear"""
+    main_simpleNN()
