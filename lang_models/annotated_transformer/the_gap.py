@@ -37,6 +37,45 @@ def linear_transformation(input_data, weights, bias):
     return output
 
 
+import torch.nn.functional as F
+from torch import Tensor
+
+
+def to_logsoftmax_predict(logits: Tensor) -> None:
+    t_shape = logits.shape
+
+    if len(t_shape) == 1:
+        # Apply log softmax
+        log_probs = F.log_softmax(logits, dim=0)
+    else:
+        # Apply log_softmax along the last dimension (dimension -1)
+        log_probs = F.log_softmax(logits, dim=-1)
+
+    # Print the log probabilities
+    print("Log Probabilities:")
+    print(log_probs)
+
+    if len(t_shape) == 1:
+        # Sum of log probabilities should be close to 1 (within numerical precision)
+        print(
+            "Sum of Log Probabilities (should be close to 1):",
+            torch.sum(torch.exp(log_probs)),
+        )
+        # To get the predicted class, you can find the index with the highest log probability
+        predicted_class = torch.argmax(log_probs).item()
+        print("Predicted Class:", predicted_class)
+    else:
+        # Sum of log probabilities along dimension -1 should be close to 1
+        print(
+            "Sum of Log Probabilities along dimension -1 (should be close to 1):",
+            torch.sum(torch.exp(log_probs), dim=-1),
+        )
+        # To get the predicted class for each sample, find the index with the highest log probability
+        predicted_classes = torch.argmax(log_probs, dim=-1)
+        print("Predicted Classes for Each Sample:")
+        print(predicted_classes)
+
+
 if __name__ == "__main__":
     # Define the input data (a batch of 3 samples, each with 2 features)
     input_data = torch.tensor([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])

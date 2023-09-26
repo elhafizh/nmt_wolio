@@ -79,7 +79,19 @@ def main_simpleNN():
     print("Output of linear_transformation():")
     print(output)
 
+def main_tologsoftmax():
+    logits = torch.tensor([2.0, 1.0, 0.1])
+    the_gap.to_logsoftmax_predict(logits=logits)
+    print("------------------------------------------------------------")
+    logits = torch.tensor([
+        [2.0, 1.0, 0.1], [0.5, 1.5, 2.5],
+    ])
+    the_gap.to_logsoftmax_predict(logits=logits)
+
 
 if __name__ == "__main__":
     """The GAP: nn.Linear"""
     main_simpleNN()
+
+    """The GAP: nn.functional.log_softmax"""
+    main_tologsoftmax()
