@@ -13,6 +13,7 @@ pp = pprint.PrettyPrinter()
 The Annotated Transformer module
 """
 
+
 def main_simpleNN():
     # Define the input data (a batch of 3 samples, each with 2 features)
     input_data = torch.tensor(
@@ -79,14 +80,38 @@ def main_simpleNN():
     print("Output of linear_transformation():")
     print(output)
 
+
 def main_tologsoftmax():
     logits = torch.tensor([2.0, 1.0, 0.1])
     the_gap.to_logsoftmax_predict(logits=logits)
     print("------------------------------------------------------------")
-    logits = torch.tensor([
-        [2.0, 1.0, 0.1], [0.5, 1.5, 2.5],
-    ])
+    logits = torch.tensor(
+        [
+            [2.0, 1.0, 0.1],
+            [0.5, 1.5, 2.5],
+        ]
+    )
     the_gap.to_logsoftmax_predict(logits=logits)
+
+
+def main_matmulNNparams():
+    # create an instance model
+    model = the_gap.matmulWithNNParams()
+
+    # Print the model's parameters
+    for name, param in model.named_parameters():
+        print(f"Parameter name: {name}")
+        print(f"Parameter value:\n{param}\n")
+
+    # Generate some input data
+    input_data = torch.randn(2, 3)
+
+    # Forward pass through the model
+    output = model(input_data)
+
+    # Print the output
+    print("Output:")
+    print(output)
 
 
 if __name__ == "__main__":
@@ -95,3 +120,9 @@ if __name__ == "__main__":
 
     """The GAP: nn.functional.log_softmax"""
     main_tologsoftmax()
+
+    """The GAP: nn.Parameters"""
+    main_matmulNNparams()
+
+    """The GAP: visualize uniform/normal distribution"""
+    the_gap.generate_visualize_dist("normal", 1000)

@@ -1,3 +1,6 @@
+from typing import Annotated, Literal
+
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
@@ -74,6 +77,37 @@ def to_logsoftmax_predict(logits: Tensor) -> None:
         predicted_classes = torch.argmax(log_probs, dim=-1)
         print("Predicted Classes for Each Sample:")
         print(predicted_classes)
+
+
+# Define a custom neural network module that utilizing nn.Parameter
+class matmulWithNNParams(nn.Module):
+    def __init__(self):
+        super(matmulWithNNParams, self).__init__()
+        # Create a learnable parameter
+        self.weight = nn.Parameter(torch.randn(3, 3))
+
+    def forward(self, x):
+        # Use the learnable parameter in the forward pass
+        output = torch.matmul(x, self.weight)
+        return output
+
+
+def generate_visualize_dist(
+    dist_type: Literal["uniform", "normal"],
+    qty: Annotated[int, "How much data do you want to generate?"],
+) -> None:
+    if dist_type == "uniform":
+        # Generate random numbers between 0 and 1 from a uniform distribution
+        data = torch.rand(qty)
+    if dist_type == "normal":
+        # Generate 1000 random numbers from a normal distribution with mean 0 and standard deviation 1
+        data = torch.randn(qty)
+    # Plot a histogram to visualize the distribution
+    plt.hist(data, bins=20, density=True)
+    plt.title(f"{dist_type} distribution")
+    plt.xlabel("value")
+    plt.ylabel("probability density")
+    plt.show()
 
 
 if __name__ == "__main__":
