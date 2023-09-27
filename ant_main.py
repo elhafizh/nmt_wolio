@@ -1,6 +1,7 @@
 # Import pprint, module we use for making our print statements prettier
 import pprint
 
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
@@ -114,6 +115,21 @@ def main_matmulNNparams():
     print(output)
 
 
+def main_NNDropout():
+    # Create an instance of MyModel
+    model = the_gap.SimpleNNDropout()
+
+    # Generate some input data
+    input_data = torch.randn(3, 10)  # Batch size of 3, input size of 10
+
+    # Forward pass through the model
+    output = model(input_data)
+
+    # Print the output
+    print("Output:")
+    print(output)
+
+
 if __name__ == "__main__":
     """The GAP: nn.Linear"""
     main_simpleNN()
@@ -126,3 +142,10 @@ if __name__ == "__main__":
 
     """The GAP: visualize uniform/normal distribution"""
     the_gap.generate_visualize_dist("normal", 1000)
+
+    """The GAP: visualize 2D Tensor"""
+    tensor = torch.randn(3, 6)
+    the_gap.visualize_2D_tensor(tensor=tensor)
+
+    """The GAP: simple neural network with dropout"""
+    main_NNDropout()

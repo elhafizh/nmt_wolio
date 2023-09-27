@@ -1,9 +1,12 @@
+import pprint
 from typing import Annotated, Literal
 
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
+
+pp = pprint.PrettyPrinter()
 
 """
 nn.Linear : defining linear (fully connected) layers in a neural network
@@ -108,6 +111,38 @@ def generate_visualize_dist(
     plt.xlabel("value")
     plt.ylabel("probability density")
     plt.show()
+
+
+def visualize_2D_tensor(tensor: Tensor) -> None:
+    if len(tensor.shape) == 2:
+        pp.pprint(tensor)
+        # Create a heatmap to visualize the tensor
+        plt.imshow(tensor, cmap="viridis", aspect="auto")
+        plt.colorbar(label="Value")
+        # Access the individual dimension values
+        dimensions = tensor.shape
+        plt.title(f"Tensor ({dimensions[0]}x{dimensions[1]})")
+        plt.xlabel("Column Index")
+        plt.ylabel("Row Index")
+        plt.show()
+    else:
+        print("The tensor's shape must equal two dimensions (a matrix).")
+
+
+# Define a simple neural network with dropout
+class SimpleNNDropout(nn.Module):
+    def __init__(self):
+        super(SimpleNNDropout, self).__init__()
+        self.fc1 = nn.Linear(10, 5)  # Fully connected layer
+        self.dropout = nn.Dropout(p=0.5)  # Dropout layer
+        self.fc2 = nn.Linear(5, 2)  # Another fully connected layer
+
+    def forward(self, x):
+        x = self.fc1(x)
+        x = torch.relu(x)  # Apply ReLU activation
+        x = self.dropout(x)  # Apply dropout with p=0.5
+        x = self.fc2(x)
+        return x
 
 
 if __name__ == "__main__":
