@@ -129,3 +129,18 @@ class Encoder(nn.Module):
         for layer in self.layers:
             x = layer(x, mask)
         return self.norm(x)
+
+class SubLayerConnection(nn.Module):
+    """
+    A residual connection followed by a Layer Norm.
+    Note for code simplicity the norm is first as opposed to last.
+    """
+
+    def __init__(self, size, dropout):
+        super(SubLayerConnection, self).__init__()
+        self.norm = LayerNorm(size)
+        self.dropout = nn.Dropout(dropout)
+    
+    def forward(self, x, sublayer):
+        "Apply residual connection to any sublayer with the same size"
+        return x + self.dropout(sublayer(self.norm(x)))
