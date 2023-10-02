@@ -130,17 +130,102 @@ class Encoder(nn.Module):
             x = layer(x, mask)
         return self.norm(x)
 
-class SubLayerConnection(nn.Module):
+
+class SublayerConnection(nn.Module):
     """
-    A residual connection followed by a Layer Norm.
+    A residual connection followed by a layer norm.
     Note for code simplicity the norm is first as opposed to last.
     """
 
     def __init__(self, size, dropout):
-        super(SubLayerConnection, self).__init__()
+        super(SublayerConnection, self).__init__()
         self.norm = LayerNorm(size)
         self.dropout = nn.Dropout(dropout)
-    
+
     def forward(self, x, sublayer):
-        "Apply residual connection to any sublayer with the same size"
+        "Apply residual connection to any sublayer with the same size."
         return x + self.dropout(sublayer(self.norm(x)))
+
+
+class EncoderLayer(nn.Module):
+    "Encoder is made up of self-attn and feed forward (defined below)"
+
+    def __init__(self, size, self_attn, feed_forward, dropout):
+        super(EncoderLayer, self).__init__()
+        self.self_attn = self_attn
+        self.feed_forward = feed_forward
+        self.sublayer = clones(SublayerConnection(size, dropout), 2)
+        self.size = size
+
+    def forward(self, x, mask):
+        "Follow Figure 1 (left) for connections."
+        x = self.sublayer[0](x, lambda x: self.self_attn(x, x, x, mask))
+        return self.sublayer[1](x, self.feed_forward)
+
+
+class Decoder(nn.Module):
+    "Generic N layer decoder with masking."
+
+    def __init__(self, layer, N):
+        super(Decoder, self).__init__()
+        self.layers = clones(layer, N)
+        self.norm = LayerNorm(layer.size)
+
+    def forward(self, x, memory, src_mask, tgt_mask):
+        for layer in self.layers:
+            x = layer(x, memory, src_mask, tgt_mask)
+        return self.norm(x)
+
+
+class DecoderLayer(nn.Module):
+    "Decoder is made of self-attn, src-attn, and feed forward (defined below)"
+
+    def __init__(self, size, self_attn, src_attn, feed_forward, dropout):
+        super(DecoderLayer, self).__init__()
+        self.size = size
+        self.self_attn = self_attn
+        self.src_attn = src_attn
+        self.feed_forward = feed_forward
+        self.sublayer = clones(SublayerConnection(size, dropout), 3)
+
+    def forward(self, x, memory, src_mask, tgt_mask):
+        "Follow Figure 1 (right) for connections."
+        m = memory
+        x = self.sublayer[0](x, lambda x: self.self_attn(x, x, x, tgt_mask))
+        x = self.sublayer[1](x, lambda x: self.src_attn(x, m, m, src_mask))
+        return self.sublayer[2](x, self.feed_forward)
+
+
+def subsequent_mask(size):
+    "Mask out subsequent positions."
+    attn_shape = (1, size, size)
+    subsequent_mask = torch.triu(torch.ones(attn_shape), diagonal=1).type(torch.uint8)
+    return subsequent_mask == 0
+
+
+def example_mask():
+    LS_data = pd.concat(
+        [
+            pd.DataFrame(
+                {
+                    "Subsequent Mask": subsequent_mask(20)[0][x, y].flatten(),
+                    "Window": y,
+                    "Masking": x,
+                }
+            )
+            for y in range(20)
+            for x in range(20)
+        ]
+    )
+
+    return (
+        alt.Chart(LS_data)
+        .mark_rect()
+        .properties(height=250, width=250)
+        .encode(
+            alt.X("Window:O"),
+            alt.Y("Masking:O"),
+            alt.Color("Subsequent Mask:Q", scale=alt.Scale(scheme="viridis")),
+        )
+        .interactive()
+    )
