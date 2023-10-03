@@ -113,7 +113,7 @@ def generate_visualize_dist(
     plt.show()
 
 
-def visualize_2D_tensor(tensor: Tensor) -> None:
+def visualize_thin_tensor(tensor: Tensor) -> None:
     if len(tensor.shape) == 2:
         pp.pprint(tensor)
         # Create a heatmap to visualize the tensor
@@ -125,8 +125,18 @@ def visualize_2D_tensor(tensor: Tensor) -> None:
         plt.xlabel("Column Index")
         plt.ylabel("Row Index")
         plt.show()
+    elif len(tensor.shape) == 3:
+        # Iterate through the 3D tensor and plot each 2D slice
+        for i in range(tensor.size(0)):
+            plt.figure(figsize=(5, 4))  # Set the figure size
+            plt.imshow(tensor[i], cmap='viridis', aspect='auto')
+            plt.colorbar(label='Value')
+            plt.title(f'Layer {i+1}')
+            plt.xlabel('Column Index')
+            plt.ylabel('Row Index')
+            plt.show()
     else:
-        print("The tensor's shape must equal two dimensions (a matrix).")
+        print("The tensor's shape must equal two or dimensions.")
 
 
 # Define a simple neural network with dropout
