@@ -15,3 +15,5 @@ spacy==3.6.1
 GPUtil==1.4.0 
 matplotlib==3.7.1
 nltk==3.8.1
+sentencepiece==0.1.99
+OpenNMT-py==3.4.3
