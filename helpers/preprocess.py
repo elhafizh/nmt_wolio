@@ -3,8 +3,11 @@ from pathlib import Path
 from typing import Dict, List, Sequence, Tuple
 
 import pandas as pd
+import sentencepiece as spm
 from tokenizers import ByteLevelBPETokenizer
 from tqdm.auto import tqdm
+
+from . import utils
 
 
 def samples_for_training_tokenizer(
@@ -45,11 +48,6 @@ def train_tokenizer(
     )
     os.mkdir(f"{path_samples}/tokenizer")
     return tokenizer.save_model(f"{path_samples}/tokenizer")
-
-
-import sentencepiece as spm
-
-from . import utils
 
 
 def train_sentencepiece(
@@ -124,3 +122,62 @@ def train_sentencepiece(
     ]
     for fl in models_created:
         utils.move_file(fl, "dataset/")
+
+
+def sentence_subwording(
+    source_model: str,
+    target_model: str,
+    source_raw: str,
+    target_raw: str,
+):
+    """
+    Subword tokenize the source and target datasets using SentencePiece models.
+
+    Args:
+        source_model (str): Path to the source language SentencePiece model.
+        target_model (str): Path to the target language SentencePiece model.
+        source_raw (str): Path to the raw source language dataset.
+        target_raw (str): Path to the raw target language dataset.
+
+    Returns:
+        str, str: Paths to the subword-tokenized source and target datasets.
+    """
+    source_subworded = source_raw + ".subword"
+    target_subworded = target_raw + ".subword"
+
+    print("Source Model:", source_model)
+    print("Target Model:", target_model)
+    print("Source Dataset:", source_raw)
+    print("Target Dataset:", target_raw)
+
+    sp = spm.SentencePieceProcessor()
+
+    # Subwording the train source
+    sp.load(source_model)
+    with open(source_raw, encoding="utf-8") as source, open(
+        source_subworded, "w+", encoding="utf-8"
+    ) as source_subword:
+        for line in source:
+            line = line.strip()
+            line = sp.encode_as_pieces(line)
+            # line = ['<s>'] + line + ['</s>']    # add start & end tokens; optional
+            line = " ".join([token for token in line])
+            source_subword.write(line + "\n")
+
+    print("Done subwording the source dataset! Output:", source_subworded)
+
+    # Subwording the train target
+    sp.load(target_model)
+    with open(target_raw, encoding="utf-8") as target, open(
+        target_subworded, "w+", encoding="utf-8"
+    ) as target_subword:
+        for line in target:
+            line = line.strip()
+            line = sp.encode_as_pieces(line)
+            # line = ['<s>'] + line + ['</s>']    # add start & end tokens; unrequired for OpenNMT
+            line = " ".join([token for token in line])
+            target_subword.write(line + "\n")
+
+    print("Done subwording the target dataset! Output:", target_subworded)
+
+    return source_subworded, target_subworded
