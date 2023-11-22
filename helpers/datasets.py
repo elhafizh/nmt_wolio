@@ -1,7 +1,10 @@
 import csv
+import os
 from typing import Annotated, Dict, List, Sequence, Tuple
 
 import pandas as pd
+
+from . import f_regex
 
 
 def load_mt_dataset(link: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
@@ -49,9 +52,19 @@ def prepare_authentic_dataset(paths: List) -> pd.DataFrame:
 
     print("Dataset shape (rows, columns):", df_authentics_ind_wlo.shape)
 
+    # remove unnecessary symbols
+    df_authentics_ind_wlo.wolio = df_authentics_ind_wlo.wolio.apply(
+        lambda x: f_regex.delete_istl_from_sentence(x)
+    )
+    df_authentics_ind_wlo.wolio = df_authentics_ind_wlo.wolio.apply(
+        lambda x: f_regex.delete_words_from_pb(x)
+    )
+
     # Save source and target to two text files
     df_source = df_authentics_ind_wlo.indonesia
     df_target = df_authentics_ind_wlo.wolio
+
+    create_folder_if_not_exists("./dataset")
 
     df_source.to_csv(
         "dataset/authentic.ind",
@@ -69,3 +82,17 @@ def prepare_authentic_dataset(paths: List) -> pd.DataFrame:
     )
 
     return df_authentics_ind_wlo
+
+
+def create_folder_if_not_exists(folder_path: str):
+    """
+    Verify if a folder exists. If not, create a new one.
+
+    Args:
+        folder_path (str): The path of the folder to be verified/created.
+    """
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+        print(f"Folder '{folder_path}' created.")
+    else:
+        print(f"Folder '{folder_path}' exists.")
