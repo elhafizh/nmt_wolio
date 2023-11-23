@@ -1,4 +1,6 @@
+import csv
 import os
+import sys
 from pathlib import Path
 from typing import Dict, List, Sequence, Tuple
 
@@ -181,3 +183,99 @@ def sentence_subwording(
     print("Done subwording the target dataset! Output:", target_subworded)
 
     return source_subworded, target_subworded
+
+
+def split_dataset_segment(num_dev, num_test, source_file, target_file):
+    """
+    Split a parallel dataset into training, development, and test sets.
+
+    Args:
+        num_dev (int): Number of samples to include in the development set.
+        num_test (int): Number of samples to include in the test set.
+        source_file (str): File path for the subword-tokenized source language data.
+        target_file (str): File path for the subword-tokenized target language data.
+
+    Returns:
+        None
+
+    This function reads parallel text data from source and target files,
+    combines them into a dataframe, and then splits the data into training,
+    development, and test sets. The resulting sets are written to separate files
+    for both source and target languages.
+
+    Files created:
+        source_file.train, target_file.train: Training set files
+        source_file.dev, target_file.dev: Development set files
+        source_file.test, target_file.test: Test set files
+    """
+
+    # Read data from source and target files
+    df_source = pd.read_csv(
+        source_file,
+        names=["Source"],
+        sep="\0",
+        quoting=csv.QUOTE_NONE,
+        skip_blank_lines=False,
+        on_bad_lines="skip",
+    )
+    df_target = pd.read_csv(
+        target_file,
+        names=["Target"],
+        sep="\0",
+        quoting=csv.QUOTE_NONE,
+        skip_blank_lines=False,
+        on_bad_lines="skip",
+    )
+    df = pd.concat(
+        [df_source, df_target], axis=1
+    )  # Join the two dataframes along columns
+
+    # Delete rows with empty cells (source or target)
+    df = df.dropna()
+
+    # Extract Dev set from the main dataset
+    df_dev = df.sample(n=int(num_dev))
+    df_train = df.drop(df_dev.index)
+
+    # Extract Test set from the main dataset
+    df_test = df_train.sample(n=int(num_test))
+    df_train = df_train.drop(df_test.index)
+
+    """Write the dataframe to two Source and Target files"""
+
+    # training set
+    source_file_train, target_file_train = utils.write_to_files(
+        df_train,
+        source_file,
+        target_file,
+        ".train",
+    )
+
+    # development set
+    source_file_dev, target_file_dev = utils.write_to_files(
+        df_dev,
+        source_file,
+        target_file,
+        ".dev",
+    )
+
+    # test set
+    source_file_test, target_file_test = utils.write_to_files(
+        df_test,
+        source_file,
+        target_file,
+        ".test",
+    )
+
+    print(
+        "Output files",
+        *[
+            source_file_train,
+            target_file_train,
+            source_file_dev,
+            target_file_dev,
+            source_file_test,
+            target_file_test,
+        ],
+        sep="\n",
+    )
