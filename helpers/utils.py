@@ -135,3 +135,18 @@ def write_mtdata_to_files(
         tf.write("\n")  # end of file newline
 
     return source_file, target_file
+
+
+def write_to_file(filename: str, content: str) -> None:
+    """
+    Write content to a file with the specified filename.
+
+    Args:
+        filename (str): The name of the file to write.
+        content (str): The content to be written to the file.
+
+    Example:
+        write_to_file("example.txt", "This is the content to be written to the file.")
+    """
+    with open(filename, "w+") as file:
+        file.write(content.expandtabs(4))
