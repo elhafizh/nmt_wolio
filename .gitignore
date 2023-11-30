@@ -160,3 +160,5 @@ pip-selfcheck.json
 output/
 dataset/KB_2017_Raw.xlsx
 dataset/KB_TD_Raw.xlsx
+experiment.ipynb
+compilation/

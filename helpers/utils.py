@@ -105,7 +105,13 @@ def get_filename_from_path(file_path: str):
     return os.path.basename(file_path)
 
 
-def write_to_files(df, source_file, target_file, suffix, encoding='utf-8'):
+def write_mtdata_to_files(
+    df,
+    source_file,
+    target_file,
+    suffix,
+    encoding="utf-8",
+):
     """
     Write a DataFrame to source and target files with the specified suffix.
 
@@ -118,14 +124,14 @@ def write_to_files(df, source_file, target_file, suffix, encoding='utf-8'):
     """
     source_file = source_file + suffix
     target_file = target_file + suffix
-    df_dict = df.to_dict(orient='list')
+    df_dict = df.to_dict(orient="list")
 
     with open(source_file, "w", encoding=encoding) as sf:
-        sf.write("\n".join(line for line in df_dict['Source']))
+        sf.write("\n".join(line for line in df_dict["Source"]))
         sf.write("\n")  # end of file newline
 
     with open(target_file, "w", encoding=encoding) as tf:
-        tf.write("\n".join(line for line in df_dict['Target']))
+        tf.write("\n".join(line for line in df_dict["Target"]))
         tf.write("\n")  # end of file newline
-    
+
     return source_file, target_file

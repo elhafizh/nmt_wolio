@@ -244,7 +244,7 @@ def split_dataset_segment(num_dev, num_test, source_file, target_file):
     """Write the dataframe to two Source and Target files"""
 
     # training set
-    source_file_train, target_file_train = utils.write_to_files(
+    source_file_train, target_file_train = utils.write_mtdata_to_files(
         df_train,
         source_file,
         target_file,
@@ -252,7 +252,7 @@ def split_dataset_segment(num_dev, num_test, source_file, target_file):
     )
 
     # development set
-    source_file_dev, target_file_dev = utils.write_to_files(
+    source_file_dev, target_file_dev = utils.write_mtdata_to_files(
         df_dev,
         source_file,
         target_file,
@@ -260,7 +260,7 @@ def split_dataset_segment(num_dev, num_test, source_file, target_file):
     )
 
     # test set
-    source_file_test, target_file_test = utils.write_to_files(
+    source_file_test, target_file_test = utils.write_mtdata_to_files(
         df_test,
         source_file,
         target_file,
