@@ -1,6 +1,6 @@
 #!/bin/bash
 
-file_path="main.py"
+file_path="helpers/datasets.py"
 
 # Run black on the file
 black "$file_path"

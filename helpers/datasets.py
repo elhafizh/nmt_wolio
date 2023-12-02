@@ -1,31 +1,49 @@
 import csv
 import os
-from typing import Annotated, Dict, List, Sequence, Tuple
+from pathlib import Path
+from typing import Annotated, Dict, List, Sequence, Tuple, Union
 
 import pandas as pd
 
 from . import f_regex, utils
 
 
-def load_mt_dataset(link: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    """Fetching data from external source
+def load_mt_dataset(
+    link: str,
+) -> Union[Tuple[pd.DataFrame, pd.DataFrame], pd.DataFrame,]:
+    """Fetches data from an external source.
 
     Args:
-        link: dataset location
+        link (str): The location of the dataset.
 
     Returns:
-        tuple: A tuple of dataframe which consists of parallel sentences
-            and a reference dictionary.
+        Union[Tuple[pd.DataFrame, pd.DataFrame], pd.DataFrame]:
+            A tuple containing two DataFrames if the dataset is in Excel format.
+            The first DataFrame represents the 'Sentence Pair' sheet, and the second DataFrame represents
+            the 'Dictionary' sheet. If the dataset is in another format (assumed to be CSV),
+            a single DataFrame is returned with column names derived from the file name.
     """
-    sentences, vocabularies = pd.read_excel(
-        link, sheet_name="Sentence Pair"
-    ), pd.read_excel(link, sheet_name="Dictionary")
 
-    # Make all column names lowercase
-    sentences.columns = sentences.columns.str.lower()
-    vocabularies.columns = vocabularies.columns.str.lower()
+    file_path = Path(link)
 
-    return sentences, vocabularies
+    # Compare the file extension (remove dot)
+    if file_path.suffix[1:] == "xlsx":
+        sentences, vocabularies = pd.read_excel(
+            link, sheet_name="Sentence Pair"
+        ), pd.read_excel(link, sheet_name="Dictionary")
+
+        # Make all column names lowercase
+        sentences.columns = sentences.columns.str.lower()
+        vocabularies.columns = vocabularies.columns.str.lower()
+
+        return sentences, vocabularies
+    else:
+        # Make the file name as column name
+        column_name = file_path.stem + file_path.suffix
+
+        dataset = pd.read_csv(file_path, sep="delimiter", names=[column_name])
+
+        return dataset
 
 
 def prepare_authentic_dataset(
