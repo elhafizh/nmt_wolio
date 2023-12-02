@@ -28,11 +28,16 @@ def load_mt_dataset(link: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
     return sentences, vocabularies
 
 
-def prepare_authentic_dataset(paths: List) -> pd.DataFrame:
+def prepare_authentic_dataset(
+    paths: List,
+    is_lowercase: bool = False,
+) -> pd.DataFrame:
     """Shuffle and write dataframe to local files
 
     Args:
-        paths : a list of strings representing file location
+        paths (List): A list of strings representing file locations.
+        is_lowercase (bool, optional):
+            If True, converts the strings in the resulting DataFrame to lowercase
 
     Returns:
         pd.DataFrame: a dataframe of parallel sentences
@@ -63,6 +68,11 @@ def prepare_authentic_dataset(paths: List) -> pd.DataFrame:
     # Save source and target to two text files
     df_source = df_authentics_ind_wlo.indonesia
     df_target = df_authentics_ind_wlo.wolio
+
+    # Make the columns lowercase
+    if is_lowercase:
+        df_source = df_source.str.lower()
+        df_target = df_target.str.lower()
 
     utils.create_folder_if_not_exists("./dataset")
 
