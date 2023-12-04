@@ -150,3 +150,24 @@ def write_to_file(filename: str, content: str) -> None:
     """
     with open(filename, "w+") as file:
         file.write(content.expandtabs(4))
+
+
+def copy_files(source_folder: str, target_folder: str) -> None:
+    """
+    Copies all files from the source folder to the target folder.
+
+    Args:
+        source_folder (str): The path to the source folder containing files to be copied.
+        target_folder (str): The path to the target folder where files will be copied to.
+    """
+    # Create the target directory if it doesn't exist
+    create_folder_if_not_exists(target_folder)
+
+    # Get a list of all files in the source folder
+    files = os.listdir(source_folder)
+
+    # Copy each file to the target folder
+    for file in files:
+        source_path = os.path.join(source_folder, file)
+        target_path = os.path.join(target_folder, file)
+        shutil.copy2(source_path, target_path)
