@@ -166,8 +166,13 @@ def copy_files(source_folder: str, target_folder: str) -> None:
     # Get a list of all files in the source folder
     files = os.listdir(source_folder)
 
-    # Copy each file to the target folder
-    for file in files:
-        source_path = os.path.join(source_folder, file)
-        target_path = os.path.join(target_folder, file)
-        shutil.copy2(source_path, target_path)
+    try:
+        # Copy each file to the target folder
+        for file in files:
+            # if file 
+            if file != 'data.csv':
+                source_path = os.path.join(source_folder, file)
+                target_path = os.path.join(target_folder, file)
+                shutil.copy2(source_path, target_path)
+    except IsADirectoryError as err:
+        pass
