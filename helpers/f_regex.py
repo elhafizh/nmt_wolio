@@ -1,11 +1,11 @@
 import re
 
 
-def delete_unnecessary_whitespace(text: str):
+def delete_unnecessary_whitespace(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
-def delete_words_from_pb(sentence: str):
+def delete_words_from_pb(sentence: str) -> str:
     """
     Deletes the portion of the input sentence starting from the occurrence of "(pb)"
     and extending until the end of the sentence, including any punctuation.
@@ -26,7 +26,7 @@ def delete_words_from_pb(sentence: str):
     return result
 
 
-def delete_istl_from_sentence(sentence: str):
+def delete_istl_from_sentence(sentence: str) -> str:
     """
     Deletes the exact string "(istl)" from the input sentence.
 
@@ -39,3 +39,23 @@ def delete_istl_from_sentence(sentence: str):
     result = delete_unnecessary_whitespace(result)
 
     return result.strip()
+
+
+def remove_sentence_after_asterisk(input_text: str) -> str:
+    """
+    Removes the asterisk symbol (*) and the entire sentence that follows it from the input text.
+
+    Args:
+        input_text (str): The input text containing sentences and asterisk symbols.
+
+    Returns:
+        str: The cleaned text with the asterisk symbol and the following sentence removed.
+
+    Example:
+        >>> text = "There are many variations of passages *of Lorem Ipsum available"
+        >>> cleaned_text = remove_sentence_after_asterisk(text)
+        >>> print(cleaned_text)
+        "There are many variations of passages"
+    """
+    cleaned_text = re.sub(r'\*.*', '', input_text)
+    return cleaned_text

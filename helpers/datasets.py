@@ -72,6 +72,9 @@ def prepare_authentic_dataset(
     df_authentics_ind_wlo = df_authentics_ind_wlo.sample(frac=1).reset_index(
         drop=True,
     )
+    
+    # Delete nan
+    df_authentics_ind_wlo = df_authentics_ind_wlo.dropna()
 
     print("Dataset shape (rows, columns):", df_authentics_ind_wlo.shape)
 
@@ -82,6 +85,9 @@ def prepare_authentic_dataset(
     df_authentics_ind_wlo.wolio = df_authentics_ind_wlo.wolio.apply(
         lambda x: f_regex.delete_words_from_pb(x)
     )
+    df_authentics_ind_wlo.wolio = df_authentics_ind_wlo.wolio.apply(
+        lambda x: f_regex.remove_sentence_after_asterisk(x)
+    )
 
     # Save source and target to two text files
     df_source = df_authentics_ind_wlo.indonesia
@@ -91,6 +97,9 @@ def prepare_authentic_dataset(
     if is_lowercase:
         df_source = df_source.str.lower()
         df_target = df_target.str.lower()
+        # Remove apostrophes from the 'sentence'
+        df_source = df_source.str.replace("'", "")
+        df_target = df_target.str.replace("'", "")
 
     utils.create_folder_if_not_exists("./dataset")
 
