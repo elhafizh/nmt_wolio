@@ -57,5 +57,19 @@ def remove_sentence_after_asterisk(input_text: str) -> str:
         >>> print(cleaned_text)
         "There are many variations of passages"
     """
-    cleaned_text = re.sub(r'\*.*', '', input_text)
+    cleaned_text = re.sub(r"\*.*", "", input_text)
     return cleaned_text
+
+
+def is_hidden(name: str) -> bool:
+    """Check if a file or folder is hidden based on its name.
+
+    Args:
+        name (str): The name of the file or folder.
+
+    Returns:
+        bool: True if the file or folder is hidden, False otherwise.
+    """
+    hidden_pattern = re.compile(r"^\.")
+
+    return bool(hidden_pattern.match(name))

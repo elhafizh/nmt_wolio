@@ -11,6 +11,8 @@ from mpl_toolkits.mplot3d import Axes3D
 from nltk.util import ngrams
 from torch import Tensor
 
+from helpers import f_regex
+
 
 def visualize_3Dtensor_inscatter(tensor_3d: Tensor) -> None:
     x = tensor_3d[:, :, 0].flatten()
@@ -168,16 +170,22 @@ def copy_files(source_folder: str, target_folder: str) -> None:
     # Get a list of all files in the source folder
     files = os.listdir(source_folder)
 
-    try:
-        # Copy each file to the target folder
-        for file in files:
-            # if file
-            if file != "data.csv":
-                source_path = os.path.join(source_folder, file)
-                target_path = os.path.join(target_folder, file)
+    for file in files:
+        if file != "data.csv":
+            source_path = os.path.join(source_folder, file)
+            target_path = os.path.join(target_folder, file)
+            try:
                 shutil.copy2(source_path, target_path)
-    except IsADirectoryError as err:
-        pass
+            except IsADirectoryError as err:
+                if not f_regex.is_hidden(file):
+                    command = [
+                        "cp", "-r",
+                        f"{source_folder}/{file}/",
+                        f"{target_folder}/"
+                    ]
+                    create_folder_if_not_exists(f"{target_folder}/{file}")
+                    execute_cmd(command)
+                    print("execute_cmd")
 
 
 def execute_cmd(command: List[str], log_output: bool = False) -> str:
