@@ -307,3 +307,24 @@ def build_vocabulary(config_file: str) -> None:
     ]
     utils.create_folder_if_not_exists("./compilation")
     utils.execute_cmd(commands)
+
+
+def training(config_file: str) -> None:
+    """Train a model based on the specified OpenNMT configuration file.
+
+    Args:
+        config_file (str): The file path to the OpenNMT configuration file.
+
+    Note:
+        This function uses the 'onmt_train' command to initiate the training
+        process for a neural machine translation model. The training is
+        configured using the provided OpenNMT configuration file.
+
+    Example:
+        >>> training("my_training_config.yaml")
+        # Initiates model training based on the configuration specified in
+        # 'my_training_config.yaml'.
+
+    """
+    command = ["onmt_train", "-config", config_file]
+    utils.execute_cmd(command)
