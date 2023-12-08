@@ -326,5 +326,7 @@ def training(config_file: str) -> None:
         # 'my_training_config.yaml'.
 
     """
-    command = ["onmt_train", "-config", config_file]
+    command = [
+        "onmt_train", "-config", config_file
+    ]
     utils.execute_cmd(command)
