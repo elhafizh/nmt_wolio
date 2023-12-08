@@ -171,8 +171,8 @@ def copy_files(source_folder: str, target_folder: str) -> None:
     try:
         # Copy each file to the target folder
         for file in files:
-            # if file 
-            if file != 'data.csv':
+            # if file
+            if file != "data.csv":
                 source_path = os.path.join(source_folder, file)
                 target_path = os.path.join(target_folder, file)
                 shutil.copy2(source_path, target_path)
@@ -180,34 +180,45 @@ def copy_files(source_folder: str, target_folder: str) -> None:
         pass
 
 
-def execute_cmd(command: List[str]) -> str:
-    """Execute a command using subprocess and return the output.
+def execute_cmd(command: List[str], log_output: bool = False) -> str:
+    """
+    Execute a command in the system shell.
 
     Args:
-        command (List[str]): A list representing the command and its arguments.
+        command (List[str]): A list containing the command and its arguments.
+        log_output (bool, optional): If True, save the output to a file. Default is False.
 
     Returns:
-        str: The standard output of the command if successful, or an empty string
-             if the command fails.
+        str: The standard output of the command if 'log_output' is False, an empty string otherwise.
 
     Example:
-        >>> execute_cmd(['ls', '-l'])
-        Command executed successfully
-        Output: total 8
-                -rw-r--r-- 1 user user   36 Dec  8 10:00 example.py
-                -rw-r--r-- 1 user user  567 Dec  8 09:45 README.md
-                ...
+        >>> execute_cmd(["ls", "-l"])
+        'total 8\n-rw-rw-r-- 1 user user  12 Dec  1 12:00 example.txt\n'
+
+        >>> execute_cmd(["ls", "-l"], log_output=True)
+        # Executes the command and saves the output to a file with a generated filename.
+
+    Note:
+        If 'log_output' is True, the standard output is saved to a file with a filename
+        generated using 'generate_log_filename()' and the command's name.
 
     """
-    result = subprocess.run(
-        command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
-    )
-    if result.returncode == 0:
-        return result.stdout
+    if not log_output:
+        result = subprocess.run(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        if result.returncode == 0:
+            return result.stdout
+        else:
+            print("Error executing command")
+            print("Error:", result.stderr)
+            return ""
     else:
-        print("Error executing command")
-        print("Error:", result.stderr)
-        return ""
+        with open(f"{generate_log_filename()}_{command[0]}.txt", "w") as f:
+            subprocess.run(command, stdout=f, stderr=subprocess.PIPE, text=True)
 
 
 def get_cpu_count() -> int:
