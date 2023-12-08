@@ -272,3 +272,38 @@ def generateTrainingConfig(*args: Type[dataclass]) -> str:
         content += arg.config
 
     return content
+
+
+def build_vocabulary(config_file: str) -> None:
+    """Build the vocabulary based on the specified OpenNMT configuration file.
+
+    Args:
+        config_file (str): The file path to the OpenNMT configuration file.
+
+    Returns:
+        None: The function does not return a value.
+
+    Note:
+        This function uses the 'onmt_build_vocab' command to build the vocabulary
+        based on the provided OpenNMT configuration file. The vocabulary is
+        created with a specified number of threads, utilizing the
+        'utils.get_cpu_count()' function.
+
+        The resulting vocabulary is stored in the './compilation' folder.
+
+    Example:
+        >>> build_vocabulary("my_config.yaml")
+        # Executes the 'onmt_build_vocab' command based on the 'my_config.yaml'
+        # file and creates the vocabulary in the './compilation' folder.
+    """
+    commands = [
+        "onmt_build_vocab",
+        "-config",
+        config_file,
+        "-n_sample",
+        "-1",
+        "-num_threads",
+        f"{utils.get_cpu_count()}",
+    ]
+    utils.create_folder_if_not_exists("./compilation")
+    utils.execute_cmd(commands)
