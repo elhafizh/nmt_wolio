@@ -124,6 +124,7 @@ class TrainingComplementary:
     def __post_init__(self):
         gpu_ranks = f"\n# Number of GPUs, and IDs of GPUs\n"
         gpu_ranks = f"world_size: {self.world_size}\n"
+        gpu_ranks = gpu_ranks + f"gpu_ranks:\n"
         for i in range(self.world_size):
             gpu_ranks = gpu_ranks + f"- {i}\n"
 
