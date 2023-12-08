@@ -1,5 +1,7 @@
 import os
 import shutil
+import subprocess
+from datetime import datetime
 from typing import List, Tuple
 
 import matplotlib.pyplot as plt
@@ -176,3 +178,70 @@ def copy_files(source_folder: str, target_folder: str) -> None:
                 shutil.copy2(source_path, target_path)
     except IsADirectoryError as err:
         pass
+
+
+def execute_cmd(command: List[str]) -> str:
+    """Execute a command using subprocess and return the output.
+
+    Args:
+        command (List[str]): A list representing the command and its arguments.
+
+    Returns:
+        str: The standard output of the command if successful, or an empty string
+             if the command fails.
+
+    Example:
+        >>> execute_cmd(['ls', '-l'])
+        Command executed successfully
+        Output: total 8
+                -rw-r--r-- 1 user user   36 Dec  8 10:00 example.py
+                -rw-r--r-- 1 user user  567 Dec  8 09:45 README.md
+                ...
+
+    """
+    result = subprocess.run(
+        command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+    )
+    if result.returncode == 0:
+        return result.stdout
+    else:
+        print("Error executing command")
+        print("Error:", result.stderr)
+        return ""
+
+
+def get_cpu_count() -> int:
+    """Get the number of CPUs/cores on the machine using the 'nproc' command.
+
+    Returns:
+        int: The number of CPUs/cores on the machine.
+
+    Example:
+        >>> get_cpu_count()
+        4
+    """
+    commands = ["nproc", "--all"]
+    num = int(execute_cmd(commands))
+
+    return num
+
+
+def generate_log_filename() -> str:
+    """Generate a timestamped log file name in the format 'YYYYMMDD_HHMMSS'.
+
+    Returns:
+        str: The timestamped log file name.
+
+    Note:
+        This function uses the current date and time to create a timestamped log
+        file name in a human-readable and sortable format. The format is
+        'YYYYMMDD_HHMMSS', where 'YYYY' is the year, 'MM' is the month,
+        'DD' is the day, 'HH' is the hour, 'MM' is the minute, and 'SS' is the
+        second.
+
+    Example:
+        >>> generate_log_filename()
+        '20231208_153021'
+    """
+    log_filename = datetime.now().strftime("%Y%m%d_%H%M%S")
+    return log_filename
