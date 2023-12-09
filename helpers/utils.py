@@ -295,3 +295,15 @@ def check_gpu_info():
         print("Free GPU memory:", free_memory_mb, "MB out of:", total_memory_mb, "MB")
     else:
         print("GPU is not available.")
+
+def create_new_file(file_name:str, content:str = ""):
+    """
+    Create a new file and write content to it.
+
+    Args:
+        file_name (str): The name of the new file.
+        content (str): The content to be written to the file.
+    """
+    with open(file_name, 'w') as file:
+        file.write(content)
+    print(f"File '{file_name}' created successfully.")
