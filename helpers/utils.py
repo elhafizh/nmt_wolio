@@ -179,9 +179,10 @@ def copy_files(source_folder: str, target_folder: str) -> None:
             except IsADirectoryError as err:
                 if not f_regex.is_hidden(file):
                     command = [
-                        "cp", "-r",
+                        "cp",
+                        "-r",
                         f"{source_folder}/{file}/",
-                        f"{target_folder}/"
+                        f"{target_folder}/",
                     ]
                     create_folder_if_not_exists(f"{target_folder}/{file}")
                     execute_cmd(command)
@@ -264,3 +265,33 @@ def generate_log_filename() -> str:
     """
     log_filename = datetime.now().strftime("%Y%m%d_%H%M%S")
     return log_filename
+
+
+def check_gpu_info():
+    """
+    Check GPU availability, name, and free memory.
+
+    This function prints information about the availability of GPU,
+    the name of the GPU (if available), and the free GPU memory.
+
+    Example:
+        >>> check_gpu_info()
+        GPU is available.
+        GPU Name: NVIDIA GeForce GTX 1080
+        Free GPU memory: 8000.0 MB out of: 8192.0 MB
+    """
+    # Check if CUDA (GPU support) is available
+    if torch.cuda.is_available():
+        print("GPU is available.")
+        # Get the name of the GPU
+        gpu_name = torch.cuda.get_device_name(0)
+        print("GPU Name:", gpu_name)
+
+        # Get GPU memory information
+        gpu_memory = torch.cuda.mem_get_info(0)
+        free_memory_mb = gpu_memory[0] / 1024**2
+        total_memory_mb = gpu_memory[1] / 1024**2
+
+        print("Free GPU memory:", free_memory_mb, "MB out of:", total_memory_mb, "MB")
+    else:
+        print("GPU is not available.")
