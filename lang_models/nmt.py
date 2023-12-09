@@ -238,7 +238,9 @@ class TrainingRecord:
         config = (
             config + f"# Where to save the log file and the output models/checkpoints\n"
         )
+        utils.create_folder_if_not_exists(f"{self.main_dir}/models/")
         config = config + f"log_file: {self.main_dir}/models/train.log\n"
+        utils.create_new_file(f"{self.main_dir}/models/train.log")
         config = (
             config + f"save_model: {self.main_dir}/models/{self.model_filename}\n\n"
         )
@@ -326,7 +328,5 @@ def training(config_file: str) -> None:
         # 'my_training_config.yaml'.
 
     """
-    command = [
-        "onmt_train", "-config", config_file
-    ]
+    command = ["onmt_train", "-config", config_file]
     utils.execute_cmd(command)
