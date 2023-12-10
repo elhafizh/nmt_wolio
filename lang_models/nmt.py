@@ -241,9 +241,16 @@ class TrainingRecord:
         utils.create_folder_if_not_exists(f"{self.main_dir}/models/")
         config = config + f"log_file: {self.main_dir}/models/train.log\n"
         utils.create_new_file(f"{self.main_dir}/models/train.log")
+        utils.create_new_file(f"{self.main_dir}/models/train_tee.log")
         config = (
             config + f"save_model: {self.main_dir}/models/{self.model_filename}\n\n"
         )
+
+        config = config + f"# Activating TensorBoard\n"
+        config = config + f"tensorboard: true\n"
+        self.tensorboard_log = f"{self.main_dir}/models/tensorboard"
+        utils.create_folder_if_not_exists(f"{self.tensorboard_log}")
+        config = config + f"tensorboard_log_dir: {self.tensorboard_log} \n\n"
         self.config = config.expandtabs(4)
 
 
