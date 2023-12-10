@@ -186,7 +186,6 @@ def copy_files(source_folder: str, target_folder: str) -> None:
                     ]
                     create_folder_if_not_exists(f"{target_folder}/{file}")
                     execute_cmd(command)
-                    print("execute_cmd")
 
 
 def execute_cmd(command: List[str], log_output: bool = False) -> str:
