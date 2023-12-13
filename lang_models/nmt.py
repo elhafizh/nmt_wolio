@@ -1,5 +1,5 @@
 from dataclasses import InitVar, dataclass, is_dataclass
-from typing import Type
+from typing import List, Type, Union
 
 from helpers import utils
 
@@ -18,7 +18,7 @@ class TransformerEssential:
         e_ls (float): Label Smoothing factor.
         d_model (int): Word embedding size for both source (src) and target (tgt) sequences.
         model_type (str, optional): Type of the Transformer model. Defaults to "transformer".
-        position_encoding (str, optional): Type of position encoding. Defaults to "true".
+        position_encoding (bool, optional): Type of position encoding. Defaults to True.
     """
 
     n_enc: int
@@ -29,7 +29,7 @@ class TransformerEssential:
     e_ls: float
     d_model: int
     model_type: str = "transformer"
-    position_encoding: str = "true"
+    position_encoding: bool = True
 
     def __post_init__(self):
         config = f"\n## Transformer Essential Parameters \n\n"
@@ -39,7 +39,7 @@ class TransformerEssential:
         config = config + f"dec_layers: {self.n_dec} \n"
         config = config + f"transformer_ff: {self.d_ff} \n"
         config = config + f"heads: {self.h} \n"
-        config = config + f"position_encoding: {self.position_encoding} \n"
+        config = config + f"position_encoding: {bool_yaml(self.position_encoding)} \n"
         config = config + f"dropout: {self.p_drop} \n"
         config = config + f"label_smoothing: {self.e_ls} \n"
         config = config + f"word_vec_size: {self.d_model} \n "
@@ -104,7 +104,7 @@ class TrainingComplementary:
         batch_type (str, optional): Batch grouping method for batch size. Defaults to "tokens".
         normalization (str, optional): Normalization method of the gradient. Defaults to "tokens".
         param_init (float, optional): Parameters initialization over a uniform distribution with support. Use 0 to not use initialization. Defaults to 0.
-        param_init_glorot (str, optional): Initialize parameters with xavier_uniform. Required for transformers. Defaults to "true".
+        param_init_glorot (bool, optional): Initialize parameters with xavier_uniform. Required for transformers. Defaults to True.
         world_size (int, optional): Total number of distributed processes. Defaults to 1.
         hidden_size (int, optional): Overwrites enc_hid_size and dec_hid_size. Defaults to 512.
     """
@@ -117,7 +117,7 @@ class TrainingComplementary:
     batch_type: str = "tokens"
     normalization: str = "tokens"
     param_init: float = 0
-    param_init_glorot: str = "true"
+    param_init_glorot: bool = True
     world_size: int = 1
     hidden_size: int = 512
 
@@ -137,7 +137,7 @@ class TrainingComplementary:
         config = config + f"batch_type: {self.batch_type}\n"
         config = config + f"normalization: {self.normalization}\n"
         config = config + f"param_init: {self.param_init}\n"
-        config = config + f"param_init_glorot: {self.param_init_glorot}\n"
+        config = config + f"param_init_glorot: {bool_yaml(self.param_init_glorot)}\n"
         config = config + f"hidden_size: {self.hidden_size}\n"
         config = config + gpu_ranks
         self.config = config
@@ -337,3 +337,113 @@ def training(config_file: str) -> None:
     """
     command = ["onmt_train", "-config", config_file]
     utils.execute_cmd(command)
+
+
+@dataclass
+class TranslateEssential:
+    """TranslateEssential is a data class for configuring sequence translation.
+
+    Args:
+        model (Union[str, List[str]]): Path to model .pt file(s). Multiple models can be specified
+            for ensemble decoding.
+        src (str): Path to the source sequence file to decode (one line per sequence).
+        min_length (int, optional): Minimum prediction length. Defaults to 1.
+        verbose (bool, optional): If True, print scores and predictions for each sentence.
+            Defaults to False.
+        tgt (str, optional): Path to the true target sequence file (optional). Defaults to "".
+        replace_unk (bool, optional): If True, replace the generated UNK tokens with the source
+            token that had the highest attention weight. Defaults to False.
+        phrase_table (str, optional): If provided (with replace_unk), look up the identified
+            source token in the phrase_table and give the corresponding target token. Defaults to "".
+    """
+
+    model: Union[str, List[str]]
+    src: str
+    min_length: int = 1
+    verbose: bool = False
+    tgt: str = ""
+    replace_unk: bool = False
+    phrase_table: str = ""
+
+    def __post_init__(self):
+        config = f"\n## Data \n \n"
+        if isinstance(self.model, list):
+            # if isinstance(self.src, list) and all(isinstance(item, str) for item in self.model):
+            config = config + f"model:\n"
+            for i in range(len(self.model)):
+                config = config + f"- {self.model[i]}\n"
+        elif isinstance(self.model, str):
+            config = config + f"model: {self.model}\n"
+        config = config + f"src: {self.src}\n"
+        config = config + f"output: {self.src}.translated\n"
+        config = config + f"min_length: {self.min_length}\n"
+        config = config + f"verbose: {bool_yaml(self.verbose)}\n"
+        config = config + f"# tgt: {self.tgt}\n"
+        config = config + f"gpu: 0\n"
+
+        config = config + f"replace_unk: {bool_yaml(self.replace_unk)}\n"
+        config = config + f"# phrase_table: {self.phrase_table}\n"
+
+        self.config = config
+
+
+@dataclass
+class TranslateExtra:
+    """TranslateExtra is a data class for additional configuration options in sequence translation.
+
+    Args:
+        report_align (bool, optional): If True, report alignment for each translation. Defaults to False.
+        gold_align (bool, optional): If True, report alignment between source and gold target,
+            useful for testing the performance of learned alignments. Defaults to False.
+        report_time (bool, optional): If True, report some translation time metrics. Defaults to False.
+        attn_debug (bool, optional): If True, print the best attention for each word. Defaults to False.
+        align_debug (bool, optional): If True, print the best alignment for each word. Defaults to False.
+        with_score (bool, optional): If True, add a tab-separated score to the translation. Defaults to False.
+        torch_profile (bool, optional): If True, report PyTorch profiling stats. Defaults to False.
+        dump_beam (str, optional): File to dump beam information to. Defaults to "".
+        n_best (int, optional): If verbose is set, output the n_best decoded sentences. Defaults to 1.
+
+    """
+
+    report_align: bool = False
+    gold_align: bool = False
+    report_time: bool = False
+    attn_debug: bool = False
+    align_debug: bool = False
+    with_score: bool = False
+    torch_profile: bool = False
+    dump_beam: str = ""
+    n_best: int = 1
+
+    def __post_init__(self):
+        config = f"\n\n## Inspect Translation\n\n"
+        config = config + f"report_align: {bool_yaml(self.report_align)}\n"
+        config = config + f"gold_align: {bool_yaml(self.gold_align)}\n"
+        config = config + f"report_time: {bool_yaml(self.report_time)}\n"
+        config = config + f"attn_debug: {bool_yaml(self.attn_debug)}\n"
+        config = config + f"align_debug: {bool_yaml(self.align_debug)}\n"
+        config = config + f"with_score: {bool_yaml(self.with_score)}\n"
+        config = config + f"profile: {bool_yaml(self.torch_profile)}\n"
+        config = config + f"# dump_beam: {self.dump_beam}\n"
+        config = config + f"n_best: {self.n_best}\n"
+        self.config = config
+
+
+def bool_yaml(val: bool) -> str:
+    """
+    Convert a Python boolean value into a YAML boolean representation.
+
+    Args:
+        val (bool): The boolean value to be converted.
+
+    Returns:
+        str: The YAML boolean representation of the input boolean.
+             If the input is True, returns 'true'; if False, returns 'false'.
+
+    Example:
+        >>> bool_yaml(True)
+        'true'
+        >>> bool_yaml(False)
+        'false'
+    """
+    return str(val).lower()
