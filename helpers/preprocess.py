@@ -185,6 +185,27 @@ def sentence_subwording(
     return source_subworded, target_subworded
 
 
+def sentence_desubword(target_model: str, target_pred: str):
+    """Desubword sentences using a SentencePiece model.
+
+    Args:
+        target_model (str): Path to the SentencePiece model file.
+        target_pred (str): Path to the file containing subword-encoded sentences for desubwording.
+    """
+    target_decodeded = target_pred + ".desubword"
+
+    sp = spm.SentencePieceProcessor()
+    sp.load(target_model)
+
+    with open(target_pred) as pred, open(target_decodeded, "w+") as pred_decoded:
+        for line in pred:
+            line = line.strip().split(" ")
+            line = sp.decode_pieces(line)
+            pred_decoded.write(line + "\n")
+
+    print("Done desubwording! Output:", target_decodeded)
+
+
 def split_dataset_segment(num_dev, num_test, source_file, target_file):
     """
     Split a parallel dataset into training, development, and test sets.

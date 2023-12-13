@@ -359,6 +359,7 @@ class TranslateEssential:
 
     model: Union[str, List[str]]
     src: str
+    translated_by: str = ""
     min_length: int = 1
     verbose: bool = False
     tgt: str = ""
@@ -375,7 +376,10 @@ class TranslateEssential:
         elif isinstance(self.model, str):
             config = config + f"model: {self.model}\n"
         config = config + f"src: {self.src}\n"
-        config = config + f"output: {self.src}.translated\n"
+        if self.translated_by:
+            config = config + f"output: {self.src}.translated.{self.translated_by}\n"
+        else:
+            config = config + f"output: {self.src}.translated\n"
         config = config + f"min_length: {self.min_length}\n"
         config = config + f"verbose: {bool_yaml(self.verbose)}\n"
         config = config + f"# tgt: {self.tgt}\n"
