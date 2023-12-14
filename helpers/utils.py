@@ -332,10 +332,8 @@ def load_eval_set(target_test: str, target_pred: str):
     with open(target_test) as test:
         for line in test:
             line = line.strip()
-            refs.append(line)
-
-    # the metric evaluation required list of list
-    refs = [refs]
+            # the metric evaluation required list of list
+            refs.append([line])
 
     preds = []
 

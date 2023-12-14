@@ -525,5 +525,4 @@ def compute_chrf(
     # Compute ChrF score
     result = chrf(preds=preds, target=refs)
 
-    print(f"CHRF: {result}")
     return result
