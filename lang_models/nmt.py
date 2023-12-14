@@ -1,6 +1,8 @@
 from dataclasses import InitVar, dataclass, is_dataclass
 from typing import List, Type, Union
 
+from torchmetrics.text import CHRFScore, SacreBLEUScore, TranslationEditRate
+
 from helpers import utils
 
 
@@ -347,6 +349,7 @@ class TranslateEssential:
         model (Union[str, List[str]]): Path to model .pt file(s). Multiple models can be specified
             for ensemble decoding.
         src (str): Path to the source sequence file to decode (one line per sequence).
+        translated_by (str, optional): Specify model suffix to the translated file. Defaults to "".
         min_length (int, optional): Minimum prediction length. Defaults to 1.
         verbose (bool, optional): If True, print scores and predictions for each sentence.
             Defaults to False.
@@ -451,3 +454,76 @@ def bool_yaml(val: bool) -> str:
         'false'
     """
     return str(val).lower()
+
+
+def compute_bleu(
+    target_test: str,
+    target_pred: str,
+    n_gram: int = 2,
+    lowercase: bool = True,
+):
+    """Compute BLEU score for machine translation.
+
+    Args:
+        target_test (str): The path to the detokenized file containing human translations.
+        target_pred (str): The path to the detokenized file containing machine translations.
+        n_gram (int, optional): The n-gram order for BLEU score computation. Defaults to 2.
+        lowercase (bool, optional): Whether to convert reference and prediction texts to lowercase.
+            Defaults to True.
+
+    Returns:
+        float: The computed BLEU score.
+
+    Note:
+        Make sure that the target_test and target_pred files are already detokenized.
+
+    Example:
+        bleu_score = compute_bleu("human_translations.txt", "machine_translations.txt")
+    """
+    # Make sure the target_test & target_pred files are already detokenized
+    refs, preds = utils.load_eval_set(target_test, target_pred)
+
+    # Initialize SacreBLEUScore metric
+    sacre_bleu = SacreBLEUScore(n_gram=n_gram, lowercase=lowercase)
+
+    # Compute BLEU score
+    result = sacre_bleu(preds=preds, target=refs)
+
+    return result
+
+
+def compute_chrf(
+    target_test: str,
+    target_pred: str,
+    word_order: int = 0,
+    lowercase: bool = True,
+) -> float:
+    """Compute ChrF score for machine translation.
+
+    Args:
+        target_test (str): The path to the detokenized file containing human translations.
+        target_pred (str): The path to the detokenized file containing machine translations.
+        word_order (int, optional): The word order for ChrF score computation. Defaults to 0.
+        lowercase (bool, optional): Whether to convert reference and prediction texts to lowercase.
+            Defaults to True.
+
+    Returns:
+        float: The computed ChrF score.
+
+    Note:
+        Make sure that the target_test and target_pred files are already detokenized.
+
+    Example:
+        chrf_score = compute_chrf("human_translations.txt", "machine_translations.txt")
+    """
+    # Make sure the target_test & target_pred files are already detokenized
+    refs, preds = utils.load_eval_set(target_test, target_pred)
+
+    # Initialize CHRFScore metric
+    chrf = CHRFScore(n_word_order=word_order, lowercase=lowercase)
+
+    # Compute ChrF score
+    result = chrf(preds=preds, target=refs)
+
+    print(f"CHRF: {result}")
+    return result

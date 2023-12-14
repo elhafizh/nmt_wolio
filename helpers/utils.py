@@ -295,7 +295,8 @@ def check_gpu_info():
     else:
         print("GPU is not available.")
 
-def create_new_file(file_name:str, content:str = ""):
+
+def create_new_file(file_name: str, content: str = ""):
     """
     Create a new file and write content to it.
 
@@ -303,6 +304,44 @@ def create_new_file(file_name:str, content:str = ""):
         file_name (str): The name of the new file.
         content (str): The content to be written to the file.
     """
-    with open(file_name, 'w') as file:
+    with open(file_name, "w") as file:
         file.write(content)
     print(f"File '{file_name}' created successfully.")
+
+
+def load_eval_set(target_test: str, target_pred: str):
+    """Load evaluation set for machine translation.
+
+    Args:
+        target_test (str): The path to the detokenized file containing human translations.
+        target_pred (str): The path to the detokenized file containing machine translations.
+
+    Returns:
+        tuple: A tuple containing two elements:
+            - refs (List[List[str]]): A list of reference translations. Each reference is a list of strings.
+            - preds (List[str]): A list of machine translations.
+
+    Note:
+        Make sure that the target_test and target_pred files are already detokenized.
+
+    Example:
+        refs, preds = load_eval_set("human_translations.txt", "machine_translations.txt")
+    """
+    refs = []
+
+    with open(target_test) as test:
+        for line in test:
+            line = line.strip()
+            refs.append(line)
+
+    # the metric evaluation required list of list
+    refs = [refs]
+
+    preds = []
+
+    with open(target_pred) as pred:
+        for line in pred:
+            line = line.strip()
+            preds.append(line)
+
+    return refs, preds
