@@ -262,7 +262,7 @@ def generate_log_filename() -> str:
         >>> generate_log_filename()
         '20231208_153021'
     """
-    log_filename = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_filename = datetime.now().strftime("%Y_%m_%d_%H%M%S")
     return log_filename
 
 
