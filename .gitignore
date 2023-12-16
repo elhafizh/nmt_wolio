@@ -158,3 +158,8 @@ pip-selfcheck.json
 
 ### Additional folders
 output/
+dataset/KB_2017_Raw.xlsx
+dataset/KB_TD_Raw.xlsx
+experiment.ipynb
+compilation/
+dataset/
