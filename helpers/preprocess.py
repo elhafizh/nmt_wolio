@@ -254,13 +254,12 @@ def split_dataset_segment(num_dev, num_test, source_file, target_file):
     # Delete rows with empty cells (source or target)
     df = df.dropna()
 
-    # Extract Dev set from the main dataset
-    df_dev = df.sample(n=int(num_dev))
-    df_train = df.drop(df_dev.index)
-
     # Extract Test set from the main dataset
-    df_test = df_train.sample(n=int(num_test))
-    df_train = df_train.drop(df_test.index)
+    df_test = df.sample(n=int(num_test))
+    df_train = df.drop(df_test.index)
+
+    # Extract Dev set
+    df_dev = df_train.sample(n=int(num_dev))
 
     """Write the dataframe to two Source and Target files"""
 
