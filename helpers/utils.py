@@ -260,9 +260,9 @@ def generate_log_filename() -> str:
 
     Example:
         >>> generate_log_filename()
-        '20231208_153021'
+        '2023_12_08_153021'
     """
-    log_filename = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_filename = datetime.now().strftime("%Y_%m_%d_%H%M%S")
     return log_filename
 
 
