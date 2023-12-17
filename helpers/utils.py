@@ -2,6 +2,7 @@ import os
 import shutil
 import subprocess
 from datetime import datetime
+from pathlib import Path
 from typing import List, Tuple
 
 import matplotlib.pyplot as plt
@@ -126,19 +127,27 @@ def write_mtdata_to_files(
         suffix (str): Suffix to be added to the file names.
         encoding (str, optional): Encoding for writing files. Default is 'utf-8'.
     """
-    source_file = source_file + suffix
-    target_file = target_file + suffix
+    source_path = Path(source_file)
+    target_path = Path(target_file)
+
+    create_folder_if_not_exists("dataset/split")
+    saved_dir = str(source_path.parent) + "/split/"
+
+    source_filename = source_path.name + suffix
+    target_filename = target_path.name + suffix
+    source_filename = saved_dir + source_filename
+    target_filename = saved_dir + target_filename
     df_dict = df.to_dict(orient="list")
 
-    with open(source_file, "w", encoding=encoding) as sf:
+    with open(source_filename, "w", encoding=encoding) as sf:
         sf.write("\n".join(line for line in df_dict["Source"]))
         sf.write("\n")  # end of file newline
 
-    with open(target_file, "w", encoding=encoding) as tf:
+    with open(target_filename, "w", encoding=encoding) as tf:
         tf.write("\n".join(line for line in df_dict["Target"]))
         tf.write("\n")  # end of file newline
 
-    return source_file, target_file
+    return source_filename, target_filename
 
 
 def write_to_file(filename: str, content: str) -> None:
