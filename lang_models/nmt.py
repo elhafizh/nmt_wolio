@@ -489,6 +489,9 @@ def compute_bleu(
     # Compute BLEU score
     result = sacre_bleu(preds=preds, target=refs)
 
+    # Convert PyTorch tensor to Python float
+    result = result.item()
+
     return result
 
 
@@ -524,5 +527,8 @@ def compute_chrf(
 
     # Compute ChrF score
     result = chrf(preds=preds, target=refs)
+
+    # Convert PyTorch tensor to Python float
+    result = result.item()
 
     return result
