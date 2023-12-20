@@ -204,6 +204,7 @@ def sentence_desubword(target_model: str, target_pred: str):
             pred_decoded.write(line + "\n")
 
     print("Done desubwording! Output:", target_decodeded)
+    return target_decodeded
 
 
 def split_dataset_segment(num_dev, num_test, source_file, target_file):

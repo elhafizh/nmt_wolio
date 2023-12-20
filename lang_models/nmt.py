@@ -1,9 +1,12 @@
+import os
 from dataclasses import InitVar, dataclass, is_dataclass
-from typing import List, Type, Union
+from pathlib import Path
+from typing import List, Tuple, Type, Union
 
+import pandas as pd
 from torchmetrics.text import CHRFScore, SacreBLEUScore, TranslationEditRate
 
-from helpers import utils
+from helpers import f_regex, preprocess, utils
 
 
 @dataclass
@@ -368,25 +371,39 @@ class TranslateEssential:
     tgt: str = ""
     replace_unk: bool = False
     phrase_table: str = ""
+    enable_gpu: bool = False
 
     def __post_init__(self):
         config = f"\n## Data \n \n"
         if isinstance(self.model, list):
             # if isinstance(self.src, list) and all(isinstance(item, str) for item in self.model):
             config = config + f"model:\n"
+            path_model = Path(self.model[0])
             for i in range(len(self.model)):
                 config = config + f"- {self.model[i]}\n"
         elif isinstance(self.model, str):
+            path_model = Path(self.model)
             config = config + f"model: {self.model}\n"
+        model_type = path_model.parent.parent.name
         config = config + f"src: {self.src}\n"
+        path_src = Path(self.src)
+        saved_dir = str(path_src.parent.parent)
+        self.saved_dir = f"{saved_dir}/translated/{model_type}/{path_src.name}.TranslatedBy.{self.translated_by}"
         if self.translated_by:
-            config = config + f"output: {self.src}.translated.{self.translated_by}\n"
+            config = config + f"output: {self.saved_dir}\n"
         else:
-            config = config + f"output: {self.src}.translated\n"
+            config = (
+                config
+                + f"output: {saved_dir}/translated/{model_type}/{path_src.name}.TranslatedBy.{path_model.name}\n"
+            )
+        utils.create_folder_if_not_exists(f"{saved_dir}/translated")
         config = config + f"min_length: {self.min_length}\n"
         config = config + f"verbose: {bool_yaml(self.verbose)}\n"
         config = config + f"# tgt: {self.tgt}\n"
-        config = config + f"gpu: 0\n"
+        if not self.enable_gpu:
+            config = config + f"# gpu: 0\n"
+        else:
+            config = config + f"gpu: 0\n"
 
         config = config + f"replace_unk: {bool_yaml(self.replace_unk)}\n"
         config = config + f"# phrase_table: {self.phrase_table}\n"
@@ -532,3 +549,183 @@ def compute_chrf(
     result = result.item()
 
     return result
+
+
+def generate_config_translation(models_path: str, target_translation: str) -> tuple:
+    """
+    Generate translation configuration files for a list of models.
+
+    Args:
+        models_path (str): The path to the directory containing model files.
+        target_translation (str): The target language for translation.
+
+    Returns:
+        tuple: A tuple containing lists of configuration file paths, saved logs,
+               directories for translated outputs, and model filenames.
+    """
+    models_l = os.listdir(models_path)
+    # filter out non-model files
+    models_l = [file for file in models_l if file.endswith(".pt")]
+    config_paths = []
+    saved_logs = []
+    save_translated = []
+
+    for model in models_l:
+        # generate translation config
+        saved_config_on = "./compilation/translate_config"
+        utils.create_folder_if_not_exists(saved_config_on)
+        translate_essential = TranslateEssential(
+            model=model, src=target_translation, verbose=True
+        )
+        translate_extra = TranslateExtra()
+        config_loc = f"{saved_config_on}/translate_{Path(model).name}.yaml"
+        config_paths.append(config_loc)
+        saved_logs.append(f"{translate_essential.saved_dir}.log")
+        save_translated.append(translate_essential.saved_dir)
+        utils.write_to_file(
+            config_loc, generateTrainingConfig(translate_essential, translate_extra)
+        )
+
+    return config_paths, saved_logs, save_translated, models_l
+
+
+def produce_translation(
+    config_paths: List[str],
+    saved_logs: List[str],
+) -> None:
+    """
+    Execute translation for each specified configuration file.
+
+    Args:
+        config_paths (List[str]): List of paths to translation configuration files.
+        saved_logs (List[str]): List of paths to saved log files.
+
+    Example:
+        produce_translation(
+            config_paths=["/path/to/config1.yaml", "/path/to/config2.yaml"],
+            saved_logs=["/path/to/log1.log", "/path/to/log2.log"],
+        )
+    """
+    for config, log in zip(config_paths, saved_logs):
+        nmt_command = f"\
+            onmt_translate -config {config} |& tee {log}"
+        command = ["bash", "-c", nmt_command]
+        utils.execute_cmd(command)
+
+
+def construct_desubwording(
+    translated_target: str,
+    subword_target_model: str,
+    save_translated: List[str],
+) -> Tuple[str, List[str]]:
+    """
+    Perform desubwording on translated sentences.
+
+    Args:
+        translated_target (str): The original translated target sentence.
+        subword_target_model (str): The subword target model used for desubwording.
+        save_translated (List[str]): List of translated sentences to perform desubwording on.
+
+    Returns:
+        Tuple[str, List[str]]: A tuple containing the desubworded original sentence
+                              and a list of desubworded translated sentences.
+    """
+    translated_desubword = []
+    real_translated = preprocess.sentence_desubword(
+        target_model=subword_target_model, target_pred=translated_target
+    )
+    for translated in save_translated:
+        translated_desubword.append(
+            preprocess.sentence_desubword(
+                target_model=subword_target_model, target_pred=translated
+            )
+        )
+    return real_translated, translated_desubword
+
+
+def make_evaluation(
+    models_list: List[str],
+    real_translated: str,
+    translated_desubword: List[str],
+) -> pd.DataFrame:
+    """
+    Perform evaluation on translated sentences using BLEU and CHR-F scores.
+
+    Args:
+        models_list (List[str]): List of model filenames used for translation.
+        real_translated (str): The original translated target sentence (path).
+        translated_desubword (List[str]): List of desubworded translated sentences (path).
+
+    Returns:
+        pd.DataFrame: A DataFrame containing evaluation scores (BLEU and CHR-F)
+                      for each training steps.
+    """
+    # Compute evaluation scores
+    df_score = {
+        "steps": f_regex.extract_numbers_from_filenames(models_list),
+        "bleu": [],
+        "chrf": [],
+    }
+
+    for prediction in translated_desubword:
+        df_score["bleu"].append(
+            compute_bleu(target_test=real_translated, target_pred=prediction)
+        )
+        df_score["chrf"].append(
+            compute_chrf(target_test=real_translated, target_pred=prediction)
+        )
+
+    df_score = pd.DataFrame(df_score)
+    return df_score
+
+
+def perform_models_translation(
+    models_path: str,
+    tobe_translated: str,
+    translated_target: str,
+    subword_target_model: str,
+) -> pd.DataFrame:
+    """
+    Perform translation, desubwording, and evaluation for a set of models.
+
+    Args:
+        models_path (str): The path to the directory containing model files.
+        tobe_translated (str): The source sentence to be translated.
+        translated_target (str): The original translated target sentence.
+        subword_target_model (str): The subword target model used for desubwording.
+
+    Returns:
+        pd.DataFrame: A DataFrame containing evaluation scores (BLEU and CHR-F)
+                      for each translated sentence.
+
+    Example:
+        df_evaluation = perform_models_translation(
+            models_path="/path/to/models",
+            tobe_translated="/path/to/source_sentences",
+            translated_target="/path/to/target_sentences"",
+            subword_target_model="/path/to/subword_model",
+        )
+    """
+    # Generate translation configurations
+    config_paths, saved_logs, save_translated, models_l = generate_config_translation(
+        models_path=models_path, target_translation=tobe_translated
+    )
+
+    # Perform NMT translation
+    produce_translation(config_paths=config_paths, saved_logs=saved_logs)
+
+    # Perform desubwording
+    real_translated, translated_desubword = construct_desubwording(
+        translated_target=translated_target,
+        subword_target_model=subword_target_model,
+        save_translated=save_translated,
+    )
+
+    # Compute evaluation scores
+    df_score = make_evaluation(
+        models_list=models_l,
+        real_translated=real_translated,
+        translated_desubword=translated_desubword,
+    )
+
+    return df_score
