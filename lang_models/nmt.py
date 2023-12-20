@@ -5,6 +5,7 @@ from typing import List, Tuple, Type, Union
 
 import pandas as pd
 from torchmetrics.text import CHRFScore, SacreBLEUScore, TranslationEditRate
+from tqdm.auto import tqdm, trange
 
 from helpers import f_regex, preprocess, utils
 
@@ -394,11 +395,8 @@ class TranslateEssential:
             self.saved_dir = f"{saved_dir}{self.translated_by}"
             config = config + f"output: {self.saved_dir}\n"
         else:
-            self.saved_dir = f"{saved_dir}{path_model.name}"
-            config = (
-                config
-                + f"output: {self.saved_dir}\n"
-            )
+            self.saved_dir = f"{saved_dir}{path_model.name}.outcome"
+            config = config + f"output: {self.saved_dir}\n"
         config = config + f"min_length: {self.min_length}\n"
         config = config + f"verbose: {bool_yaml(self.verbose)}\n"
         config = config + f"# tgt: {self.tgt}\n"
@@ -574,7 +572,7 @@ def generate_config_translation(models_path: str, target_translation: str) -> tu
 
     saved_config_on = "./compilation/translate_config"
     utils.create_folder_if_not_exists(saved_config_on)
-    for model in models_l:
+    for model in tqdm(models_l, desc="generate_config_translation()"):
         # generate translation config
         translate_essential = TranslateEssential(
             model=model, src=target_translation, verbose=True
@@ -608,9 +606,10 @@ def produce_translation(
             saved_logs=["/path/to/log1.log", "/path/to/log2.log"],
         )
     """
-    for config, log in zip(config_paths, saved_logs):
+    count_l = len(config_paths)
+    for i in trange(count_l, desc="produce_translation()"):
         nmt_command = f"\
-            onmt_translate -config {config} |& tee {log}"
+            onmt_translate -config {config_paths[i]} |& tee {saved_logs[i]}"
         command = ["bash", "-c", nmt_command]
         utils.execute_cmd(command)
 
@@ -636,7 +635,7 @@ def construct_desubwording(
     real_translated = preprocess.sentence_desubword(
         target_model=subword_target_model, target_pred=translated_target
     )
-    for translated in save_translated:
+    for translated in tqdm(save_translated, desc="construct_desubwording()"):
         translated_desubword.append(
             preprocess.sentence_desubword(
                 target_model=subword_target_model, target_pred=translated
@@ -669,7 +668,7 @@ def make_evaluation(
         "chrf": [],
     }
 
-    for prediction in translated_desubword:
+    for prediction in tqdm(translated_desubword, desc="make_evaluation()"):
         df_score["bleu"].append(
             compute_bleu(target_test=real_translated, target_pred=prediction)
         )
