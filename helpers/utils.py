@@ -7,6 +7,7 @@ from typing import List, Tuple
 
 import matplotlib.pyplot as plt
 import nltk
+import pandas as pd
 import torch
 from mpl_toolkits.mplot3d import Axes3D
 from nltk.util import ngrams
@@ -352,3 +353,32 @@ def load_eval_set(target_test: str, target_pred: str):
             preds.append(line)
 
     return refs, preds
+
+
+def save_dataframe_to_csv(
+    dataframe: pd.DataFrame,
+    filename: str,
+    include_index: bool = False,
+):
+    """
+    Save a DataFrame to a CSV file.
+
+    Args:
+        dataframe (pd.DataFrame): The DataFrame to be saved.
+        filename (str): The name of the CSV file (including extension).
+        include_index (bool, optional): Whether to include the index in the CSV file. Default is False.
+
+    Example:
+        data = {'Name': ['Alice', 'Bob', 'Charlie', 'David'],
+                'Age': [25, 30, 22, 35],
+                'Salary': [50000, 60000, 45000, 70000]}
+
+        df = pd.DataFrame(data)
+
+        # Save DataFrame to a CSV file without index
+        save_dataframe_to_csv(df, 'output.csv')
+
+        # Save DataFrame to a CSV file with index
+        # save_dataframe_to_csv(df, 'output_with_index.csv', include_index=True)
+    """
+    dataframe.to_csv(filename, index=include_index)

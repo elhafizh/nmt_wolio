@@ -677,6 +677,8 @@ def make_evaluation(
         )
 
     df_score = pd.DataFrame(df_score)
+    df_score.sort_values(by="steps", inplace=True)
+    df_score.reset_index(drop=True, inplace=True)
     return df_score
 
 
