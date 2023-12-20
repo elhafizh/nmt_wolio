@@ -376,7 +376,6 @@ class TranslateEssential:
     def __post_init__(self):
         config = f"\n## Data \n \n"
         if isinstance(self.model, list):
-            # if isinstance(self.src, list) and all(isinstance(item, str) for item in self.model):
             config = config + f"model:\n"
             path_model = Path(self.model[0])
             for i in range(len(self.model)):
@@ -384,19 +383,22 @@ class TranslateEssential:
         elif isinstance(self.model, str):
             path_model = Path(self.model)
             config = config + f"model: {self.model}\n"
-        model_type = path_model.parent.parent.name
+        model_type = str(path_model.parent.parent.name)
         config = config + f"src: {self.src}\n"
         path_src = Path(self.src)
         saved_dir = str(path_src.parent.parent)
-        self.saved_dir = f"{saved_dir}/translated/{model_type}/{path_src.name}.TranslatedBy.{self.translated_by}"
+        saved_dir = f"{saved_dir}/translated/{model_type}"
+        utils.create_folder_if_not_exists(saved_dir)
+        saved_dir = f"{saved_dir}/{path_src.name}.TranslatedBy."
         if self.translated_by:
+            self.saved_dir = f"{saved_dir}{self.translated_by}"
             config = config + f"output: {self.saved_dir}\n"
         else:
+            self.saved_dir = f"{saved_dir}{path_model.name}"
             config = (
                 config
-                + f"output: {saved_dir}/translated/{model_type}/{path_src.name}.TranslatedBy.{path_model.name}\n"
+                + f"output: {self.saved_dir}\n"
             )
-        utils.create_folder_if_not_exists(f"{saved_dir}/translated")
         config = config + f"min_length: {self.min_length}\n"
         config = config + f"verbose: {bool_yaml(self.verbose)}\n"
         config = config + f"# tgt: {self.tgt}\n"
@@ -565,15 +567,15 @@ def generate_config_translation(models_path: str, target_translation: str) -> tu
     """
     models_l = os.listdir(models_path)
     # filter out non-model files
-    models_l = [file for file in models_l if file.endswith(".pt")]
+    models_l = [f"{models_path}/{file}" for file in models_l if file.endswith(".pt")]
     config_paths = []
     saved_logs = []
     save_translated = []
 
+    saved_config_on = "./compilation/translate_config"
+    utils.create_folder_if_not_exists(saved_config_on)
     for model in models_l:
         # generate translation config
-        saved_config_on = "./compilation/translate_config"
-        utils.create_folder_if_not_exists(saved_config_on)
         translate_essential = TranslateEssential(
             model=model, src=target_translation, verbose=True
         )
