@@ -578,7 +578,7 @@ def generate_config_translation(models_path: str, target_translation: str) -> tu
             model=model, src=target_translation, verbose=True
         )
         translate_extra = TranslateExtra()
-        config_loc = f"{saved_config_on}/translate_{Path(model).name}.yaml"
+        config_loc = f"{saved_config_on}/{Path(target_translation).name}_TRANSLATE_{Path(model).name}.yaml"
         config_paths.append(config_loc)
         saved_logs.append(f"{translate_essential.saved_dir}.log")
         save_translated.append(translate_essential.saved_dir)
