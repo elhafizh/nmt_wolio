@@ -381,4 +381,5 @@ def save_dataframe_to_csv(
         # Save DataFrame to a CSV file with index
         # save_dataframe_to_csv(df, 'output_with_index.csv', include_index=True)
     """
+    create_folder_if_not_exists(str(Path(filename).parent))
     dataframe.to_csv(filename, index=include_index)
