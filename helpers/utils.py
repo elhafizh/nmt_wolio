@@ -383,3 +383,28 @@ def save_dataframe_to_csv(
     """
     create_folder_if_not_exists(str(Path(filename).parent))
     dataframe.to_csv(filename, index=include_index)
+
+
+def filter_files_by_keywords(
+    file_list: List[str], keyword1: str, keyword2: str
+) -> List[str]:
+    """
+    Filter a list of files based on the presence of two keywords.
+
+    Args:
+        file_list (List[str]): List of strings representing file names.
+        keyword1 (str): The first keyword to search for in the file names.
+        keyword2 (str): The second keyword to search for in the file names.
+
+    Returns:
+        List[str]: A filtered list containing only the file names that contain both keywords.
+
+    Example:
+        >>> file_list = ['file_dev_subword.txt', 'file_no_dev.txt', 'file_with_subword.txt']
+        >>> filter_files_by_keywords(file_list, 'dev', 'subword')
+        ['file_dev_subword.txt']
+    """
+    filtered_files = [
+        file for file in file_list if keyword1 in file and keyword2 in file
+    ]
+    return filtered_files
