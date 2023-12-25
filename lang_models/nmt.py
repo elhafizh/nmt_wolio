@@ -732,3 +732,86 @@ def perform_models_translation(
     )
 
     return df_score
+
+
+def sentence_level_evaluation(target_test: str, target_pred: str):
+    """
+    Evaluate sentence-level metrics for machine translation predictions.
+
+    Args:
+        target_test (str): Path to the file containing reference translations.
+        target_pred (str): Path to the file containing predicted translations.
+
+    Returns:
+        pd.DataFrame: A DataFrame containing the evaluation results with columns:
+            - 'reference': List of reference translations.
+            - 'prediction': List of predicted translations.
+            - 'bleu': List of BLEU scores for each sentence pair.
+            - 'chrf': List of ChrF scores for each sentence pair.
+    """
+
+    # Load reference and predicted translations
+    refs, preds = utils.load_eval_set(target_test=target_test, target_pred=target_pred)
+
+    # Initialize SacreBLEUScore metric
+    sacre_bleu = SacreBLEUScore(n_gram=2, lowercase=True)
+
+    # Initialize CHRFScore metric
+    chrf = CHRFScore(n_word_order=0, lowercase=True)
+
+    # Initialize DataFrame to store evaluation results
+    df = {"reference": [], "prediction": [], "bleu": [], "chrf": []}
+
+    # Compute metrics for each sentence pair
+    for i in range(len(refs)):
+        ref = [refs[i]]
+        pred = [preds[i]]
+
+        bleu_score = sacre_bleu(preds=pred, target=ref).item()
+        chrf_score = chrf(preds=pred, target=ref).item()
+
+        df["reference"].append(refs[i][0])
+        df["prediction"].append(preds[i])
+        df["bleu"].append(bleu_score)
+        df["chrf"].append(chrf_score)
+
+    # Convert the results to a DataFrame
+    df = pd.DataFrame(df)
+    return df
+
+
+def gather_sentence_evaluation(target_pred_dir: str, target_test: str):
+    """
+    Gather sentence-level evaluation metrics for multiple translation files.
+
+    Args:
+        target_pred_dir (str): The directory containing multiple translation files from different model steps.
+        target_test (str): Path to the file containing reference translations.
+
+    Returns:
+        Tuple: A tuple containing two elements:
+            - list: A list of pandas DataFrames, each containing the evaluation results for a translation file.
+            - list: A list of full paths to the translation files used in the evaluation.
+    """
+
+    file_list = os.listdir(target_pred_dir)
+
+    # Filter files based on keywords from the target_test filename
+    target_test_filename = Path(target_test).name
+    target_test_filename = target_test_filename.split(".")
+    file_list = utils.filter_files_by_keywords(
+        file_list=file_list,
+        keyword1=target_test_filename[-1],
+        keyword2=target_test_filename[-2],
+    )
+
+    # Create full paths for the filtered files
+    file_list = [f"{target_pred_dir}/{file}" for file in file_list]
+
+    l_df = []
+
+    for file in tqdm(file_list, desc="sentence level evaluation"):
+        df = sentence_level_evaluation(target_test=target_test, target_pred=file)
+        l_df.append(df)
+
+    return l_df, file_list
