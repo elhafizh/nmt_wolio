@@ -207,7 +207,13 @@ def sentence_desubword(target_model: str, target_pred: str):
     return target_decodeded
 
 
-def split_dataset_segment(num_dev, num_test, source_file, target_file):
+def split_dataset_segment(
+    num_dev: int,
+    num_test: int,
+    source_file: str,
+    target_file: str,
+    seen_dev_intrain: bool = False,
+):
     """
     Split a parallel dataset into training, development, and test sets.
 
@@ -216,6 +222,8 @@ def split_dataset_segment(num_dev, num_test, source_file, target_file):
         num_test (int): Number of samples to include in the test set.
         source_file (str): File path for the subword-tokenized source language data.
         target_file (str): File path for the subword-tokenized target language data.
+        seen_dev_intrain (bool, optional): If True, include the development set in the training set.
+            Otherwise, extract it from the main dataset. Defaults to False.
 
     Returns:
         None
@@ -255,12 +263,21 @@ def split_dataset_segment(num_dev, num_test, source_file, target_file):
     # Delete rows with empty cells (source or target)
     df = df.dropna()
 
-    # Extract Test set from the main dataset
-    df_test = df.sample(n=int(num_test))
-    df_train = df.drop(df_test.index)
+    if seen_dev_intrain:
+        # Extract Test set from the main dataset
+        df_test = df.sample(n=int(num_test))
+        df_train = df.drop(df_test.index)
 
-    # Extract Dev set
-    df_dev = df_train.sample(n=int(num_dev))
+        # Extract Dev set
+        df_dev = df_train.sample(n=int(num_dev))
+    else:
+        # Extract Dev set from the main dataset
+        df_dev = df.sample(n=int(num_dev))
+        df_train = df.drop(df_dev.index)
+
+        # Extract Test set from the main dataset
+        df_test = df_train.sample(n=int(num_test))
+        df_train = df_train.drop(df_test.index)
 
     """Write the dataframe to two Source and Target files"""
 
