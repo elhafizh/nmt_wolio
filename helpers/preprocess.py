@@ -56,7 +56,8 @@ def train_sentencepiece(
     source_file_path: str,
     target_file_path: str,
     model_type: str = "bpe",
-    vocab_limit: str = "false",
+    vocab_size: int = 2_000,
+    vocab_limit: bool = False,
 ):
     """
     Train SentencePiece models for source and target languages using the specified input files.
@@ -66,7 +67,8 @@ def train_sentencepiece(
         target_file_path (str): The file path to the target language training data.
         model_type (str, optional): The type of SentencePiece model to train, e.g., "bpe" (Byte Pair Encoding).
                                     Default is "bpe".
-        vocab_limit (str, optional): If needed due to training data being too small, set to False.
+        vocab_size (int, optional): vocabulary size (merge operation in bpe), default to 2000.
+        vocab_limit (bool, optional): If needed due to training data being too small, set to False.
 
     Returns:
         None: The function saves the trained models as 'source.model', 'target.model',
@@ -74,7 +76,6 @@ def train_sentencepiece(
 
     Notes:
         - The training data is tokenized into subword pieces using SentencePiece.
-        - The vocabulary size for each model is set to 50000.
         - Digits are split into separate subword pieces with the --split_digits parameter set to True.
     """
 
@@ -87,8 +88,10 @@ def train_sentencepiece(
         + source_file_path
         + " --model_prefix="
         + source_prefix
-        + " --vocab_size=50000 --hard_vocab_limit="
-        + vocab_limit
+        + " --vocab_size="
+        + str(vocab_size)
+        + " --hard_vocab_limit="
+        + str(vocab_limit).lower()
         + " --model_type="
         + model_type
         + " --split_digits=true"
@@ -105,8 +108,10 @@ def train_sentencepiece(
         + target_file_path
         + " --model_prefix="
         + target_prefix
-        + " --vocab_size=50000 --hard_vocab_limit="
-        + vocab_limit
+        + " --vocab_size="
+        + str(vocab_size)
+        + " --hard_vocab_limit="
+        + str(vocab_limit).lower()
         + " --model_type="
         + model_type
         + " --split_digits=true"
