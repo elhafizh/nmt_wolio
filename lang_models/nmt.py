@@ -324,24 +324,22 @@ def build_vocabulary(config_file: str) -> None:
     utils.execute_cmd(commands)
 
 
-def training(config_file: str) -> None:
+def training(config_file: str, saved_log: str) -> None:
     """Train a model based on the specified OpenNMT configuration file.
 
     Args:
         config_file (str): The file path to the OpenNMT configuration file.
+        saved_log (str): path to saved training log.
 
     Note:
         This function uses the 'onmt_train' command to initiate the training
         process for a neural machine translation model. The training is
         configured using the provided OpenNMT configuration file.
 
-    Example:
-        >>> training("my_training_config.yaml")
-        # Initiates model training based on the configuration specified in
-        # 'my_training_config.yaml'.
-
     """
-    command = ["onmt_train", "-config", config_file]
+    training_command = f"\
+        onmt_train -config {config_file} |& tee {saved_log}"
+    command = ["bash", "-c", training_command]
     utils.execute_cmd(command)
 
 
