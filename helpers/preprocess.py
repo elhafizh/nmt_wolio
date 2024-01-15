@@ -322,3 +322,38 @@ def split_dataset_segment(
         ],
         sep="\n",
     )
+
+
+def bpe_dropout(
+    dataset: str, bpe_model: str, multiply_by: int = 10, prob: float = 0.1
+) -> str:
+    """
+    Apply BPE (Byte Pair Encoding) dropout to the given dataset using a specified BPE model.
+
+    Args:
+        dataset (str): The path to the input dataset file.
+        bpe_model (str): The path to the BPE model file.
+        multiply_by (int, optional): The factor by which each input line is multiplied. Defaults to 10.
+        prob (float, optional): The probability of applying BPE dropout to each token. Defaults to 0.1.
+
+    Returns:
+        str: The path to the output dataset file with BPE dropout applied.
+
+    Note:
+        BPE dropout involves encoding each line in the dataset using SentencePiece,
+        with a certain level of randomness (controlled by `prob` parameter).
+        The resulting encoded lines are then duplicated by the specified factor.
+    """
+    dataset_output = dataset + ".bd"
+
+    sp = spm.SentencePieceProcessor()
+    sp.load(bpe_model)
+
+    with open(dataset) as ds, open(dataset_output, "w+") as ds_output:
+        for line in ds:
+            for i in range(multiply_by):
+                line = sp.encode(line, out_type=str, enable_sampling=True, alpha=prob)
+                line = " ".join(line)
+                ds_output.write(line + "\n")
+    print("Done BPE dropout! Output:", dataset_output)
+    return dataset_output
