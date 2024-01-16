@@ -349,9 +349,9 @@ def bpe_dropout(
     sp = spm.SentencePieceProcessor()
     sp.load(bpe_model)
 
-    with open(dataset) as ds, open(dataset_output, "w+") as ds_output:
-        for line in ds:
-            for i in range(multiply_by):
+    for i in range(multiply_by):
+        with open(dataset) as ds, open(dataset_output, "a+") as ds_output:
+            for line in ds:
                 line = sp.encode(line, out_type=str, enable_sampling=True, alpha=prob)
                 line = " ".join(line)
                 ds_output.write(line + "\n")
