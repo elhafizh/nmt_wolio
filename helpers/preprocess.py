@@ -213,10 +213,10 @@ def sentence_desubword(target_model: str, target_pred: str):
 
 
 def split_dataset_segment(
-    num_dev: int,
-    num_test: int,
     source_file: str,
     target_file: str,
+    num_dev: int,
+    num_test: int = 0,
     seen_dev_intrain: bool = False,
 ):
     """
@@ -269,20 +269,30 @@ def split_dataset_segment(
     df = df.dropna()
 
     if seen_dev_intrain:
-        # Extract Test set from the main dataset
-        df_test = df.sample(n=int(num_test))
-        df_train = df.drop(df_test.index)
+        if num_test != 0:
+            # Extract Test set from the main dataset
+            df_test = df.sample(n=int(num_test))
+            df_train = df.drop(df_test.index)
 
-        # Extract Dev set
-        df_dev = df_train.sample(n=int(num_dev))
+            # Extract Dev set
+            df_dev = df_train.sample(n=int(num_dev))
+        else:
+            # Extract Dev set
+            df_dev = df.sample(n=int(num_dev))
+            df_train = df
     else:
-        # Extract Dev set from the main dataset
-        df_dev = df.sample(n=int(num_dev))
-        df_train = df.drop(df_dev.index)
+        if num_test != 0:
+            # Extract Dev set from the main dataset
+            df_dev = df.sample(n=int(num_dev))
+            df_train = df.drop(df_dev.index)
 
-        # Extract Test set from the main dataset
-        df_test = df_train.sample(n=int(num_test))
-        df_train = df_train.drop(df_test.index)
+            # Extract Test set from the main dataset
+            df_test = df_train.sample(n=int(num_test))
+            df_train = df_train.drop(df_test.index)
+        else:
+            # Extract Dev set
+            df_dev = df.sample(n=int(num_dev))
+            df_train = df.drop(df_dev.index)
 
     """Write the dataframe to two Source and Target files"""
 
@@ -303,12 +313,15 @@ def split_dataset_segment(
     )
 
     # test set
-    source_file_test, target_file_test = utils.write_mtdata_to_files(
-        df_test,
-        source_file,
-        target_file,
-        ".test",
-    )
+    if num_test != 0:
+        source_file_test, target_file_test = utils.write_mtdata_to_files(
+            df_test,
+            source_file,
+            target_file,
+            ".test",
+        )
+    else:
+        source_file_test, target_file_test = "", ""
 
     print(
         "Output files",
