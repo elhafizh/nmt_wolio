@@ -345,7 +345,7 @@ def training(config_file: str, saved_log: str) -> None:
 
 @dataclass
 class TranslateEssential:
-    """TranslateEssential is a data class for configuring sequence translation.
+    """TranslateEssential is a data class for setting up OpenNMT translation configuration.
 
     Args:
         model (Union[str, List[str]]): Path to model .pt file(s). Multiple models can be specified
@@ -360,6 +360,7 @@ class TranslateEssential:
             token that had the highest attention weight. Defaults to False.
         phrase_table (str, optional): If provided (with replace_unk), look up the identified
             source token in the phrase_table and give the corresponding target token. Defaults to "".
+        enable_gpu (bool, optional): If True, enable GPU acceleration. Default is False.
     """
 
     model: Union[str, List[str]]
@@ -549,13 +550,16 @@ def compute_chrf(
     return result
 
 
-def generate_config_translation(models_path: str, target_translation: str) -> tuple:
+def generate_config_translation(
+    models_path: str, target_translation: str, enable_gpu: bool = False
+) -> tuple:
     """
     Generate translation configuration files for a list of models.
 
     Args:
         models_path (str): The path to the directory containing model files.
         target_translation (str): The target language for translation.
+        enable_gpu (bool, optional): If True, enable GPU acceleration. Default is False.
 
     Returns:
         tuple: A tuple containing lists of configuration file paths, saved logs,
@@ -573,7 +577,7 @@ def generate_config_translation(models_path: str, target_translation: str) -> tu
     for model in tqdm(models_l, desc="generate_config_translation()"):
         # generate translation config
         translate_essential = TranslateEssential(
-            model=model, src=target_translation, verbose=True
+            model=model, src=target_translation, verbose=True, enable_gpu=enable_gpu
         )
         translate_extra = TranslateExtra()
         config_loc = f"{saved_config_on}/{Path(target_translation).name}_TRANSLATE_{Path(model).name}.yaml"
@@ -685,6 +689,7 @@ def perform_models_translation(
     tobe_translated: str,
     translated_target: str,
     subword_target_model: str,
+    enable_gpu: bool = False,
 ) -> pd.DataFrame:
     """
     Perform translation, desubwording, and evaluation for a set of models.
@@ -694,6 +699,7 @@ def perform_models_translation(
         tobe_translated (str): The source sentence to be translated.
         translated_target (str): The original translated target sentence.
         subword_target_model (str): The subword target model used for desubwording.
+        enable_gpu (bool, optional): If True, enable GPU acceleration. Default is False.
 
     Returns:
         pd.DataFrame: A DataFrame containing evaluation scores (BLEU and CHR-F)
@@ -709,7 +715,9 @@ def perform_models_translation(
     """
     # Generate translation configurations
     config_paths, saved_logs, save_translated, models_l = generate_config_translation(
-        models_path=models_path, target_translation=tobe_translated
+        models_path=models_path,
+        target_translation=tobe_translated,
+        enable_gpu=enable_gpu,
     )
 
     # Perform NMT translation
