@@ -408,3 +408,34 @@ def filter_files_by_keywords(
         file for file in file_list if keyword1 in file and keyword2 in file
     ]
     return filtered_files
+
+
+def create_excel_with_multiple_sheets(
+    dataframes: List[pd.DataFrame],
+    output_file: str,
+):
+    """
+    Write multiple Pandas dataframes to an Excel file with each dataframe in a separate sheet.
+
+    Args:
+        dataframes (List[pd.DataFrame]): List of Pandas dataframes to be written to separate sheets.
+        output_file (str): Output Excel file path.
+
+    Example:
+        ```python
+        df1 = pd.DataFrame({"Data": [11, 12, 13, 14]})
+        df2 = pd.DataFrame({"Data": [21, 22, 23, 24]})
+        df3 = pd.DataFrame({"Data": [31, 32, 33, 34]})
+
+        dataframes = [df1, df2, df3]
+        output_file = "pandas_multiple.xlsx"
+
+        create_excel_with_multiple_sheets(dataframes, output_file)
+        ```
+    """
+    with pd.ExcelWriter(output_file, engine="xlsxwriter") as writer:
+        counter = 1
+        # Write each dataframe to a different worksheet
+        for df in dataframes:
+            df.to_excel(writer, sheet_name=f"{counter}K", index=False)
+            counter += 1
