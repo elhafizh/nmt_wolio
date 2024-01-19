@@ -163,3 +163,5 @@ dataset/KB_TD_Raw.xlsx
 experiment.ipynb
 compilation/
 dataset/
+nusa-crowd/
+dynamic_select_weight/

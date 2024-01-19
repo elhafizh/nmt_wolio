@@ -3,7 +3,7 @@ import shutil
 import subprocess
 from datetime import datetime
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 import matplotlib.pyplot as plt
 import nltk
@@ -413,29 +413,47 @@ def filter_files_by_keywords(
 def create_excel_with_multiple_sheets(
     dataframes: List[pd.DataFrame],
     output_file: str,
+    sheet_names: Union[int, List[str]] = 1,
 ):
     """
     Write multiple Pandas dataframes to an Excel file with each dataframe in a separate sheet.
 
     Args:
         dataframes (List[pd.DataFrame]): List of Pandas dataframes to be written to separate sheets.
-        output_file (str): Output Excel file path.
+        output_file (str): The path to the output Excel file.
+        sheet_names (Union[int, List[str]], optional): Specify sheet names.
+            If int, sheets will be named as "{counter}K".
+            If list of strings, sheets will be named according to the provided list. Default is 1.
+
+    Raises:
+        ValueError: If sheet_names is neither int nor a list of strings.
 
     Example:
         ```python
-        df1 = pd.DataFrame({"Data": [11, 12, 13, 14]})
-        df2 = pd.DataFrame({"Data": [21, 22, 23, 24]})
-        df3 = pd.DataFrame({"Data": [31, 32, 33, 34]})
+        # Example usage with sheet_names as an integer
+        create_excel_with_multiple_sheets([df1, df2, df3], 'output_file.xlsx', sheet_names=1)
 
-        dataframes = [df1, df2, df3]
-        output_file = "pandas_multiple.xlsx"
-
-        create_excel_with_multiple_sheets(dataframes, output_file)
+        # Example usage with sheet_names as a list of strings
+        create_excel_with_multiple_sheets([df1, df2, df3], 'output_file.xlsx', sheet_names=['Sheet1', 'Sheet2', 'Sheet3'])
         ```
     """
-    with pd.ExcelWriter(output_file, engine="xlsxwriter") as writer:
-        counter = 1
-        # Write each dataframe to a different worksheet
-        for df in dataframes:
-            df.to_excel(writer, sheet_name=f"{counter}K", index=False)
-            counter += 1
+    if isinstance(sheet_names, int):
+        # If the input is an integer
+        with pd.ExcelWriter(output_file, engine="xlsxwriter") as writer:
+            counter = sheet_names
+            # Write each dataframe to a different worksheet
+            for df in dataframes:
+                df.to_excel(writer, sheet_name=f"{counter}K", index=False)
+                counter += sheet_names
+    elif isinstance(sheet_names, list) and all(
+        isinstance(item, str) for item in sheet_names
+    ):
+        # If the input is a list of strings
+        with pd.ExcelWriter(output_file, engine="xlsxwriter") as writer:
+            # Write each dataframe to a different worksheet
+            for df, sheet_name in zip(dataframes, sheet_names):
+                df.to_excel(writer, sheet_name=sheet_name, index=False)
+    else:
+        raise ValueError(
+            "Invalid sheet_names. Please provide an integer or a list of strings."
+        )

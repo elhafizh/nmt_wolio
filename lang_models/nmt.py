@@ -811,6 +811,9 @@ def gather_sentence_evaluation(target_pred_dir: str, target_test: str):
         keyword2=target_test_filename[-2],
     )
 
+    # sort in ascending order
+    file_list = sorted(file_list)
+
     # Create full paths for the filtered files
     file_list = [f"{target_pred_dir}/{file}" for file in file_list]
 
