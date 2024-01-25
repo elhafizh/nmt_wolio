@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Sequence, Tuple
 
+import nltk
 import pandas as pd
 import sentencepiece as spm
 from tokenizers import ByteLevelBPETokenizer
@@ -390,3 +391,41 @@ def preprocess_monolingual(dataframe: pd.DataFrame, text_column: str) -> pd.Data
     )
 
     return dataframe
+
+
+def count_sentence_length(df: pd.DataFrame, column: str, limit: int):
+    """
+    Counts the number of sentences longer than a specified limit and less than or equal to the limit in a DataFrame column.
+
+    Args:
+        df (pd.DataFrame): The input DataFrame.
+        column (str): The name of the text column.
+        limit (int): The word limit to use for counting sentences.
+
+    Returns:
+        pd.DataFrame: A new DataFrame containing the original column and additional columns for the count of sentences
+                      longer than the limit and the count of sentences less than or equal to the limit.
+
+    Prints:
+        Total sentences longer than <limit> words: The total count of sentences longer than the limit across all rows.
+        Total sentences less than or equal to <limit> words: The total count of sentences less than or equal to the limit across all rows.
+    """
+
+    def check_out(text: str):
+        sentences = nltk.sent_tokenize(text)
+        lot = sum(1 for sentence in sentences if len(sentence.split()) > limit)
+        lte = sum(1 for sentence in sentences if len(sentence.split()) <= limit)
+        return lot, lte
+
+    new_df = df[[column]].copy()
+    new_df[[f"longer_than_{limit}", f"less_than_{limit}"]] = (
+        df[column].apply(check_out).apply(pd.Series)
+    )
+
+    # Calculate total counts across all rows
+    total_lot = new_df[f"longer_than_{limit}"].sum()
+    total_lte = new_df[f"less_than_{limit}"].sum()
+    print(f"\nTotal sentences longer than {limit} words:", total_lot)
+    print(f"Total sentences less than or equal to {limit} words:", total_lte)
+
+    return new_df
