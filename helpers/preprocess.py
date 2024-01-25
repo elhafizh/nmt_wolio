@@ -1,5 +1,6 @@
 import csv
 import os
+import string
 import sys
 from pathlib import Path
 from typing import Dict, List, Sequence, Tuple
@@ -370,3 +371,22 @@ def bpe_dropout(
                 ds_output.write(line + "\n")
     print("Done BPE dropout! Output:", dataset_output)
     return dataset_output
+
+
+def preprocess_monolingual(dataframe: pd.DataFrame, text_column: str) -> pd.DataFrame:
+    """
+    Preprocesses text in a DataFrame by converting it to lowercase and removing punctuation.
+
+    Args:
+        dataframe (pd.DataFrame): The input DataFrame.
+        text_column (str): The name of the text column.
+
+    Returns:
+        pd.DataFrame: The DataFrame with preprocessed text.
+    """
+    dataframe[text_column] = dataframe[text_column].str.lower()
+    dataframe[text_column] = dataframe[text_column].str.replace(
+        "[{}]".format(string.punctuation), ""
+    )
+
+    return dataframe
