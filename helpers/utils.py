@@ -3,10 +3,11 @@ import shutil
 import subprocess
 from datetime import datetime
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 import matplotlib.pyplot as plt
 import nltk
+import pandas as pd
 import torch
 from mpl_toolkits.mplot3d import Axes3D
 from nltk.util import ngrams
@@ -352,3 +353,107 @@ def load_eval_set(target_test: str, target_pred: str):
             preds.append(line)
 
     return refs, preds
+
+
+def save_dataframe_to_csv(
+    dataframe: pd.DataFrame,
+    filename: str,
+    include_index: bool = False,
+):
+    """
+    Save a DataFrame to a CSV file.
+
+    Args:
+        dataframe (pd.DataFrame): The DataFrame to be saved.
+        filename (str): The name of the CSV file (including extension).
+        include_index (bool, optional): Whether to include the index in the CSV file. Default is False.
+
+    Example:
+        data = {'Name': ['Alice', 'Bob', 'Charlie', 'David'],
+                'Age': [25, 30, 22, 35],
+                'Salary': [50000, 60000, 45000, 70000]}
+
+        df = pd.DataFrame(data)
+
+        # Save DataFrame to a CSV file without index
+        save_dataframe_to_csv(df, 'output.csv')
+
+        # Save DataFrame to a CSV file with index
+        # save_dataframe_to_csv(df, 'output_with_index.csv', include_index=True)
+    """
+    create_folder_if_not_exists(str(Path(filename).parent))
+    dataframe.to_csv(filename, index=include_index)
+
+
+def filter_files_by_keywords(
+    file_list: List[str], keyword1: str, keyword2: str
+) -> List[str]:
+    """
+    Filter a list of files based on the presence of two keywords.
+
+    Args:
+        file_list (List[str]): List of strings representing file names.
+        keyword1 (str): The first keyword to search for in the file names.
+        keyword2 (str): The second keyword to search for in the file names.
+
+    Returns:
+        List[str]: A filtered list containing only the file names that contain both keywords.
+
+    Example:
+        >>> file_list = ['file_dev_subword.txt', 'file_no_dev.txt', 'file_with_subword.txt']
+        >>> filter_files_by_keywords(file_list, 'dev', 'subword')
+        ['file_dev_subword.txt']
+    """
+    filtered_files = [
+        file for file in file_list if keyword1 in file and keyword2 in file
+    ]
+    return filtered_files
+
+
+def create_excel_with_multiple_sheets(
+    dataframes: List[pd.DataFrame],
+    output_file: str,
+    sheet_names: Union[int, List[str]] = 1,
+):
+    """
+    Write multiple Pandas dataframes to an Excel file with each dataframe in a separate sheet.
+
+    Args:
+        dataframes (List[pd.DataFrame]): List of Pandas dataframes to be written to separate sheets.
+        output_file (str): The path to the output Excel file.
+        sheet_names (Union[int, List[str]], optional): Specify sheet names.
+            If int, sheets will be named as "{counter}K".
+            If list of strings, sheets will be named according to the provided list. Default is 1.
+
+    Raises:
+        ValueError: If sheet_names is neither int nor a list of strings.
+
+    Example:
+        ```python
+        # Example usage with sheet_names as an integer
+        create_excel_with_multiple_sheets([df1, df2, df3], 'output_file.xlsx', sheet_names=1)
+
+        # Example usage with sheet_names as a list of strings
+        create_excel_with_multiple_sheets([df1, df2, df3], 'output_file.xlsx', sheet_names=['Sheet1', 'Sheet2', 'Sheet3'])
+        ```
+    """
+    if isinstance(sheet_names, int):
+        # If the input is an integer
+        with pd.ExcelWriter(output_file, engine="xlsxwriter") as writer:
+            counter = sheet_names
+            # Write each dataframe to a different worksheet
+            for df in dataframes:
+                df.to_excel(writer, sheet_name=f"{counter}K", index=False)
+                counter += sheet_names
+    elif isinstance(sheet_names, list) and all(
+        isinstance(item, str) for item in sheet_names
+    ):
+        # If the input is a list of strings
+        with pd.ExcelWriter(output_file, engine="xlsxwriter") as writer:
+            # Write each dataframe to a different worksheet
+            for df, sheet_name in zip(dataframes, sheet_names):
+                df.to_excel(writer, sheet_name=sheet_name, index=False)
+    else:
+        raise ValueError(
+            "Invalid sheet_names. Please provide an integer or a list of strings."
+        )

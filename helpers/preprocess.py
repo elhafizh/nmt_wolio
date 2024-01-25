@@ -56,7 +56,8 @@ def train_sentencepiece(
     source_file_path: str,
     target_file_path: str,
     model_type: str = "bpe",
-    vocab_limit: str = "false",
+    vocab_size: int = 2_000,
+    vocab_limit: bool = False,
 ):
     """
     Train SentencePiece models for source and target languages using the specified input files.
@@ -66,7 +67,8 @@ def train_sentencepiece(
         target_file_path (str): The file path to the target language training data.
         model_type (str, optional): The type of SentencePiece model to train, e.g., "bpe" (Byte Pair Encoding).
                                     Default is "bpe".
-        vocab_limit (str, optional): If needed due to training data being too small, set to False.
+        vocab_size (int, optional): vocabulary size (merge operation in bpe), default to 2000.
+        vocab_limit (bool, optional): If needed due to training data being too small, set to False.
 
     Returns:
         None: The function saves the trained models as 'source.model', 'target.model',
@@ -74,7 +76,6 @@ def train_sentencepiece(
 
     Notes:
         - The training data is tokenized into subword pieces using SentencePiece.
-        - The vocabulary size for each model is set to 50000.
         - Digits are split into separate subword pieces with the --split_digits parameter set to True.
     """
 
@@ -87,8 +88,10 @@ def train_sentencepiece(
         + source_file_path
         + " --model_prefix="
         + source_prefix
-        + " --vocab_size=50000 --hard_vocab_limit="
-        + vocab_limit
+        + " --vocab_size="
+        + str(vocab_size)
+        + " --hard_vocab_limit="
+        + str(vocab_limit).lower()
         + " --model_type="
         + model_type
         + " --split_digits=true"
@@ -105,8 +108,10 @@ def train_sentencepiece(
         + target_file_path
         + " --model_prefix="
         + target_prefix
-        + " --vocab_size=50000 --hard_vocab_limit="
-        + vocab_limit
+        + " --vocab_size="
+        + str(vocab_size)
+        + " --hard_vocab_limit="
+        + str(vocab_limit).lower()
         + " --model_type="
         + model_type
         + " --split_digits=true"
@@ -204,9 +209,16 @@ def sentence_desubword(target_model: str, target_pred: str):
             pred_decoded.write(line + "\n")
 
     print("Done desubwording! Output:", target_decodeded)
+    return target_decodeded
 
 
-def split_dataset_segment(num_dev, num_test, source_file, target_file):
+def split_dataset_segment(
+    source_file: str,
+    target_file: str,
+    num_dev: int,
+    num_test: int = 0,
+    seen_dev_intrain: bool = False,
+):
     """
     Split a parallel dataset into training, development, and test sets.
 
@@ -215,6 +227,8 @@ def split_dataset_segment(num_dev, num_test, source_file, target_file):
         num_test (int): Number of samples to include in the test set.
         source_file (str): File path for the subword-tokenized source language data.
         target_file (str): File path for the subword-tokenized target language data.
+        seen_dev_intrain (bool, optional): If True, include the development set in the training set.
+            Otherwise, extract it from the main dataset. Defaults to False.
 
     Returns:
         None
@@ -254,12 +268,31 @@ def split_dataset_segment(num_dev, num_test, source_file, target_file):
     # Delete rows with empty cells (source or target)
     df = df.dropna()
 
-    # Extract Test set from the main dataset
-    df_test = df.sample(n=int(num_test))
-    df_train = df.drop(df_test.index)
+    if seen_dev_intrain:
+        if num_test != 0:
+            # Extract Test set from the main dataset
+            df_test = df.sample(n=int(num_test))
+            df_train = df.drop(df_test.index)
 
-    # Extract Dev set
-    df_dev = df_train.sample(n=int(num_dev))
+            # Extract Dev set
+            df_dev = df_train.sample(n=int(num_dev))
+        else:
+            # Extract Dev set
+            df_dev = df.sample(n=int(num_dev))
+            df_train = df
+    else:
+        if num_test != 0:
+            # Extract Dev set from the main dataset
+            df_dev = df.sample(n=int(num_dev))
+            df_train = df.drop(df_dev.index)
+
+            # Extract Test set from the main dataset
+            df_test = df_train.sample(n=int(num_test))
+            df_train = df_train.drop(df_test.index)
+        else:
+            # Extract Dev set
+            df_dev = df.sample(n=int(num_dev))
+            df_train = df.drop(df_dev.index)
 
     """Write the dataframe to two Source and Target files"""
 
@@ -280,12 +313,15 @@ def split_dataset_segment(num_dev, num_test, source_file, target_file):
     )
 
     # test set
-    source_file_test, target_file_test = utils.write_mtdata_to_files(
-        df_test,
-        source_file,
-        target_file,
-        ".test",
-    )
+    if num_test != 0:
+        source_file_test, target_file_test = utils.write_mtdata_to_files(
+            df_test,
+            source_file,
+            target_file,
+            ".test",
+        )
+    else:
+        source_file_test, target_file_test = "", ""
 
     print(
         "Output files",
@@ -299,3 +335,38 @@ def split_dataset_segment(num_dev, num_test, source_file, target_file):
         ],
         sep="\n",
     )
+
+
+def bpe_dropout(
+    dataset: str, bpe_model: str, multiply_by: int = 10, prob: float = 0.1
+) -> str:
+    """
+    Apply BPE (Byte Pair Encoding) dropout to the given dataset using a specified BPE model.
+
+    Args:
+        dataset (str): The path to the input dataset file.
+        bpe_model (str): The path to the BPE model file.
+        multiply_by (int, optional): The factor by which each input line is multiplied. Defaults to 10.
+        prob (float, optional): The probability of applying BPE dropout to each token. Defaults to 0.1.
+
+    Returns:
+        str: The path to the output dataset file with BPE dropout applied.
+
+    Note:
+        BPE dropout involves encoding each line in the dataset using SentencePiece,
+        with a certain level of randomness (controlled by `prob` parameter).
+        The resulting encoded lines are then duplicated by the specified factor.
+    """
+    dataset_output = dataset + ".bd"
+
+    sp = spm.SentencePieceProcessor()
+    sp.load(bpe_model)
+
+    for i in range(multiply_by):
+        with open(dataset) as ds, open(dataset_output, "a+") as ds_output:
+            for line in ds:
+                line = sp.encode(line, out_type=str, enable_sampling=True, alpha=prob)
+                line = " ".join(line)
+                ds_output.write(line + "\n")
+    print("Done BPE dropout! Output:", dataset_output)
+    return dataset_output

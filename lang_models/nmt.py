@@ -1,9 +1,13 @@
+import os
 from dataclasses import InitVar, dataclass, is_dataclass
-from typing import List, Type, Union
+from pathlib import Path
+from typing import List, Tuple, Type, Union
 
+import pandas as pd
 from torchmetrics.text import CHRFScore, SacreBLEUScore, TranslationEditRate
+from tqdm.auto import tqdm, trange
 
-from helpers import utils
+from helpers import f_regex, preprocess, utils
 
 
 @dataclass
@@ -320,30 +324,28 @@ def build_vocabulary(config_file: str) -> None:
     utils.execute_cmd(commands)
 
 
-def training(config_file: str) -> None:
+def training(config_file: str, saved_log: str) -> None:
     """Train a model based on the specified OpenNMT configuration file.
 
     Args:
         config_file (str): The file path to the OpenNMT configuration file.
+        saved_log (str): path to saved training log.
 
     Note:
         This function uses the 'onmt_train' command to initiate the training
         process for a neural machine translation model. The training is
         configured using the provided OpenNMT configuration file.
 
-    Example:
-        >>> training("my_training_config.yaml")
-        # Initiates model training based on the configuration specified in
-        # 'my_training_config.yaml'.
-
     """
-    command = ["onmt_train", "-config", config_file]
+    training_command = f"\
+        onmt_train -config {config_file} |& tee {saved_log}"
+    command = ["bash", "-c", training_command]
     utils.execute_cmd(command)
 
 
 @dataclass
 class TranslateEssential:
-    """TranslateEssential is a data class for configuring sequence translation.
+    """TranslateEssential is a data class for setting up OpenNMT translation configuration.
 
     Args:
         model (Union[str, List[str]]): Path to model .pt file(s). Multiple models can be specified
@@ -358,6 +360,7 @@ class TranslateEssential:
             token that had the highest attention weight. Defaults to False.
         phrase_table (str, optional): If provided (with replace_unk), look up the identified
             source token in the phrase_table and give the corresponding target token. Defaults to "".
+        enable_gpu (bool, optional): If True, enable GPU acceleration. Default is False.
     """
 
     model: Union[str, List[str]]
@@ -368,25 +371,38 @@ class TranslateEssential:
     tgt: str = ""
     replace_unk: bool = False
     phrase_table: str = ""
+    enable_gpu: bool = False
 
     def __post_init__(self):
         config = f"\n## Data \n \n"
         if isinstance(self.model, list):
-            # if isinstance(self.src, list) and all(isinstance(item, str) for item in self.model):
             config = config + f"model:\n"
+            path_model = Path(self.model[0])
             for i in range(len(self.model)):
                 config = config + f"- {self.model[i]}\n"
         elif isinstance(self.model, str):
+            path_model = Path(self.model)
             config = config + f"model: {self.model}\n"
+        model_type = str(path_model.parent.parent.name)
         config = config + f"src: {self.src}\n"
+        path_src = Path(self.src)
+        saved_dir = str(path_src.parent.parent)
+        saved_dir = f"{saved_dir}/translated/{model_type}"
+        utils.create_folder_if_not_exists(saved_dir)
+        saved_dir = f"{saved_dir}/{path_src.name}.TranslatedBy."
         if self.translated_by:
-            config = config + f"output: {self.src}.translated.{self.translated_by}\n"
+            self.saved_dir = f"{saved_dir}{self.translated_by}"
+            config = config + f"output: {self.saved_dir}\n"
         else:
-            config = config + f"output: {self.src}.translated\n"
+            self.saved_dir = f"{saved_dir}{path_model.name}.outcome"
+            config = config + f"output: {self.saved_dir}\n"
         config = config + f"min_length: {self.min_length}\n"
         config = config + f"verbose: {bool_yaml(self.verbose)}\n"
         config = config + f"# tgt: {self.tgt}\n"
-        config = config + f"gpu: 0\n"
+        if not self.enable_gpu:
+            config = config + f"# gpu: 0\n"
+        else:
+            config = config + f"gpu: 0\n"
 
         config = config + f"replace_unk: {bool_yaml(self.replace_unk)}\n"
         config = config + f"# phrase_table: {self.phrase_table}\n"
@@ -489,6 +505,9 @@ def compute_bleu(
     # Compute BLEU score
     result = sacre_bleu(preds=preds, target=refs)
 
+    # Convert PyTorch tensor to Python float
+    result = result.item()
+
     return result
 
 
@@ -525,4 +544,283 @@ def compute_chrf(
     # Compute ChrF score
     result = chrf(preds=preds, target=refs)
 
+    # Convert PyTorch tensor to Python float
+    result = result.item()
+
     return result
+
+
+def generate_config_translation(
+    models_path: str, target_translation: str, enable_gpu: bool = False
+) -> tuple:
+    """
+    Generate translation configuration files for a list of models.
+
+    Args:
+        models_path (str): The path to the directory containing model files.
+        target_translation (str): The target language for translation.
+        enable_gpu (bool, optional): If True, enable GPU acceleration. Default is False.
+
+    Returns:
+        tuple: A tuple containing lists of configuration file paths, saved logs,
+               directories for translated outputs, and model filenames.
+    """
+    models_l = os.listdir(models_path)
+    # filter out non-model files
+    models_l = [f"{models_path}/{file}" for file in models_l if file.endswith(".pt")]
+    config_paths = []
+    saved_logs = []
+    save_translated = []
+
+    saved_config_on = "./compilation/translate_config"
+    utils.create_folder_if_not_exists(saved_config_on)
+    for model in tqdm(models_l, desc="generate_config_translation()"):
+        # generate translation config
+        translate_essential = TranslateEssential(
+            model=model, src=target_translation, verbose=True, enable_gpu=enable_gpu
+        )
+        translate_extra = TranslateExtra()
+        config_loc = f"{saved_config_on}/{Path(target_translation).name}_TRANSLATE_{Path(model).name}.yaml"
+        config_paths.append(config_loc)
+        saved_logs.append(f"{translate_essential.saved_dir}.log")
+        save_translated.append(translate_essential.saved_dir)
+        utils.write_to_file(
+            config_loc, generateTrainingConfig(translate_essential, translate_extra)
+        )
+
+    return config_paths, saved_logs, save_translated, models_l
+
+
+def produce_translation(
+    config_paths: List[str],
+    saved_logs: List[str],
+) -> None:
+    """
+    Execute translation for each specified configuration file.
+
+    Args:
+        config_paths (List[str]): List of paths to translation configuration files.
+        saved_logs (List[str]): List of paths to saved log files.
+
+    Example:
+        produce_translation(
+            config_paths=["/path/to/config1.yaml", "/path/to/config2.yaml"],
+            saved_logs=["/path/to/log1.log", "/path/to/log2.log"],
+        )
+    """
+    count_l = len(config_paths)
+    for i in trange(count_l, desc="produce_translation()"):
+        nmt_command = f"\
+            onmt_translate -config {config_paths[i]} |& tee {saved_logs[i]}"
+        command = ["bash", "-c", nmt_command]
+        utils.execute_cmd(command)
+
+
+def construct_desubwording(
+    translated_target: str,
+    subword_target_model: str,
+    save_translated: List[str],
+) -> Tuple[str, List[str]]:
+    """
+    Perform desubwording on translated sentences.
+
+    Args:
+        translated_target (str): The original translated target sentence.
+        subword_target_model (str): The subword target model used for desubwording.
+        save_translated (List[str]): List of translated sentences to perform desubwording on.
+
+    Returns:
+        Tuple[str, List[str]]: A tuple containing the desubworded original sentence
+                              and a list of desubworded translated sentences.
+    """
+    translated_desubword = []
+    real_translated = preprocess.sentence_desubword(
+        target_model=subword_target_model, target_pred=translated_target
+    )
+    for translated in tqdm(save_translated, desc="construct_desubwording()"):
+        translated_desubword.append(
+            preprocess.sentence_desubword(
+                target_model=subword_target_model, target_pred=translated
+            )
+        )
+    return real_translated, translated_desubword
+
+
+def make_evaluation(
+    models_list: List[str],
+    real_translated: str,
+    translated_desubword: List[str],
+) -> pd.DataFrame:
+    """
+    Perform evaluation on translated sentences using BLEU and CHR-F scores.
+
+    Args:
+        models_list (List[str]): List of model filenames used for translation.
+        real_translated (str): The original translated target sentence (path).
+        translated_desubword (List[str]): List of desubworded translated sentences (path).
+
+    Returns:
+        pd.DataFrame: A DataFrame containing evaluation scores (BLEU and CHR-F)
+                      for each training steps.
+    """
+    # Compute evaluation scores
+    df_score = {
+        "steps": f_regex.extract_numbers_from_filenames(models_list),
+        "bleu": [],
+        "chrf": [],
+    }
+
+    for prediction in tqdm(translated_desubword, desc="make_evaluation()"):
+        df_score["bleu"].append(
+            compute_bleu(target_test=real_translated, target_pred=prediction)
+        )
+        df_score["chrf"].append(
+            compute_chrf(target_test=real_translated, target_pred=prediction)
+        )
+
+    df_score = pd.DataFrame(df_score)
+    df_score.sort_values(by="steps", inplace=True)
+    df_score.reset_index(drop=True, inplace=True)
+    return df_score
+
+
+def perform_models_translation(
+    models_path: str,
+    tobe_translated: str,
+    translated_target: str,
+    subword_target_model: str,
+    enable_gpu: bool = False,
+) -> pd.DataFrame:
+    """
+    Perform translation, desubwording, and evaluation for a set of models.
+
+    Args:
+        models_path (str): The path to the directory containing model files.
+        tobe_translated (str): The source sentence to be translated.
+        translated_target (str): The original translated target sentence.
+        subword_target_model (str): The subword target model used for desubwording.
+        enable_gpu (bool, optional): If True, enable GPU acceleration. Default is False.
+
+    Returns:
+        pd.DataFrame: A DataFrame containing evaluation scores (BLEU and CHR-F)
+                      for each translated sentence.
+
+    Example:
+        df_evaluation = perform_models_translation(
+            models_path="/path/to/models",
+            tobe_translated="/path/to/source_sentences",
+            translated_target="/path/to/target_sentences"",
+            subword_target_model="/path/to/subword_model",
+        )
+    """
+    # Generate translation configurations
+    config_paths, saved_logs, save_translated, models_l = generate_config_translation(
+        models_path=models_path,
+        target_translation=tobe_translated,
+        enable_gpu=enable_gpu,
+    )
+
+    # Perform NMT translation
+    produce_translation(config_paths=config_paths, saved_logs=saved_logs)
+
+    # Perform desubwording
+    real_translated, translated_desubword = construct_desubwording(
+        translated_target=translated_target,
+        subword_target_model=subword_target_model,
+        save_translated=save_translated,
+    )
+
+    # Compute evaluation scores
+    df_score = make_evaluation(
+        models_list=models_l,
+        real_translated=real_translated,
+        translated_desubword=translated_desubword,
+    )
+
+    return df_score
+
+
+def sentence_level_evaluation(target_test: str, target_pred: str):
+    """
+    Evaluate sentence-level metrics for machine translation predictions.
+
+    Args:
+        target_test (str): Path to the file containing reference translations.
+        target_pred (str): Path to the file containing predicted translations.
+
+    Returns:
+        pd.DataFrame: A DataFrame containing the evaluation results with columns:
+            - 'reference': List of reference translations.
+            - 'prediction': List of predicted translations.
+            - 'bleu': List of BLEU scores for each sentence pair.
+            - 'chrf': List of ChrF scores for each sentence pair.
+    """
+
+    # Load reference and predicted translations
+    refs, preds = utils.load_eval_set(target_test=target_test, target_pred=target_pred)
+
+    # Initialize SacreBLEUScore metric
+    sacre_bleu = SacreBLEUScore(n_gram=2, lowercase=True)
+
+    # Initialize CHRFScore metric
+    chrf = CHRFScore(n_word_order=0, lowercase=True)
+
+    # Initialize DataFrame to store evaluation results
+    df = {"reference": [], "prediction": [], "bleu": [], "chrf": []}
+
+    # Compute metrics for each sentence pair
+    for i in range(len(refs)):
+        ref = [refs[i]]
+        pred = [preds[i]]
+
+        bleu_score = sacre_bleu(preds=pred, target=ref).item()
+        chrf_score = chrf(preds=pred, target=ref).item()
+
+        df["reference"].append(refs[i][0])
+        df["prediction"].append(preds[i])
+        df["bleu"].append(bleu_score)
+        df["chrf"].append(chrf_score)
+
+    # Convert the results to a DataFrame
+    df = pd.DataFrame(df)
+    return df
+
+
+def gather_sentence_evaluation(target_pred_dir: str, target_test: str):
+    """
+    Gather sentence-level evaluation metrics for multiple translation files.
+
+    Args:
+        target_pred_dir (str): The directory containing multiple translation files from different model steps.
+        target_test (str): Path to the file containing reference translations.
+
+    Returns:
+        Tuple: A tuple containing two elements:
+            - list: A list of pandas DataFrames, each containing the evaluation results for a translation file.
+            - list: A list of full paths to the translation files used in the evaluation.
+    """
+
+    file_list = os.listdir(target_pred_dir)
+
+    # Filter files based on keywords from the target_test filename
+    target_test_filename = Path(target_test).name
+    target_test_filename = target_test_filename.split(".")
+    file_list = utils.filter_files_by_keywords(
+        file_list=file_list,
+        keyword1=target_test_filename[-1],
+        keyword2=target_test_filename[-2],
+    )
+
+    # sort in ascending order
+    file_list = sorted(file_list)
+
+    # Create full paths for the filtered files
+    file_list = [f"{target_pred_dir}/{file}" for file in file_list]
+
+    l_df = []
+
+    for file in tqdm(file_list, desc="sentence level evaluation"):
+        df = sentence_level_evaluation(target_test=target_test, target_pred=file)
+        l_df.append(df)
+
+    return l_df, file_list

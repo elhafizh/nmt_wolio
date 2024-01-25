@@ -1,4 +1,5 @@
 import re
+from typing import List
 
 
 def delete_unnecessary_whitespace(text: str) -> str:
@@ -73,3 +74,29 @@ def is_hidden(name: str) -> bool:
     hidden_pattern = re.compile(r"^\.")
 
     return bool(hidden_pattern.match(name))
+
+
+def extract_numbers_from_filenames(filenames: List[str]) -> List[int]:
+    """
+    Extract numbers from a list of filenames.
+
+    Args:
+        filenames (List[str]): A list of filenames containing numeric values.
+
+    Returns:
+        List[int]: A list of extracted numeric values from the filenames.
+
+    Example:
+        >>> filenames = [
+        ...     'tf_base_model_step_1000.pt',
+        ...     'tf_base_model_step_2000.pt',
+        ...     'tf_base_model_step_3000.pt',
+        ...     'tf_base_model_step_4000.pt',
+        ...     'tf_base_model_step_5000.pt',
+        ... ]
+        >>> extract_numbers_from_filenames(filenames)
+        [1000, 2000, 3000, 4000, 5000]
+    """
+    # Extract numbers using regular expression
+    numbers = [int(re.search(r"\d+", filename).group()) for filename in filenames]
+    return numbers
