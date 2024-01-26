@@ -8,6 +8,8 @@ from typing import Dict, List, Sequence, Tuple
 import nltk
 import pandas as pd
 import sentencepiece as spm
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 from tokenizers import ByteLevelBPETokenizer
 from tqdm.auto import tqdm
 
@@ -427,5 +429,85 @@ def count_sentence_length(df: pd.DataFrame, column: str, limit: int):
     total_lte = new_df[f"less_than_{limit}"].sum()
     print(f"\nTotal sentences longer than {limit} words:", total_lot)
     print(f"Total sentences less than or equal to {limit} words:", total_lte)
+
+    return new_df
+
+
+def sentence_representativeness(
+    based_corpus: List[str], compared_corpus: List[str]
+) -> pd.DataFrame:
+    """
+    Computes the cosine similarity scores between sentences in based_corpus and compared_corpus using TF-IDF representation.
+
+    Args:
+        based_corpus (List[str]): List of sentences serving as the base for comparison.
+        compared_corpus (List[str]): List of sentences to be compared against the based_corpus.
+
+    Returns:
+        pd.DataFrame: A DataFrame containing cosine similarity scores between each pair of sentences in based_corpus and compared_corpus.
+                      Rows represent sentences from based_corpus, columns represent sentences from compared_corpus.
+
+    Example:
+        based_corpus = ["The cat is on the mat.", "The dog is playing in the yard."]
+        compared_corpus = ["A cat is sleeping.", "The dog is running."]
+        result_df = sentence_representativeness(based_corpus, compared_corpus)
+        print(result_df)
+    """
+    # create TfidfVectorizer object
+    tfidf = TfidfVectorizer()
+
+    # compute a sparse matrix of word vectors for all the based_corpus & compared_corpus
+    tfidf_matrix = tfidf.fit_transform(based_corpus)
+    compared_matrices = tfidf.transform(compared_corpus)
+
+    # Compute cosine similarity scores of the sentence in compared_corpus and each of the based_corpus
+    cosine_sim = pd.DataFrame(
+        cosine_similarity(tfidf_matrix, compared_matrices),
+        index=based_corpus,
+        columns=compared_corpus,
+    )
+
+    return cosine_sim
+
+
+def max_representativeness(df_cosine_score: pd.DataFrame) -> pd.DataFrame:
+    """
+    Rank the maximum representativeness scores for each sentence in based_corpus against sentences in compared_corpus.
+    Receiving input from sentence_representativeness()
+
+    Args:
+        df_cosine_score (pd.DataFrame): DataFrame containing cosine similarity scores between each pair of sentences
+                                        in based_corpus and compared_corpus.
+
+    Returns:
+        pd.DataFrame: A DataFrame containing information about the sentence with the maximum representativeness score for each based_corpus sentence.
+                      Columns include 'based' (sentence from based_corpus), 'compared' (sentence from compared_corpus with maximum score),
+                      and 'max_score' (maximum cosine similarity score).
+
+    Example:
+        df_cosine_score = pd.DataFrame({
+            "based_sentence_1": [0.8, 0.2],
+            "based_sentence_2": [0.4, 0.9],
+        }, index=["compared_sentence_1", "compared_sentence_2"])
+
+        result_df = max_representativeness(df_cosine_score)
+        print(result_df)
+    """
+    # Find the index of the column with the maximum value for each row
+    max_column_index = df_cosine_score.idxmax(axis=1)
+    # Find the maximum values for each row
+    max_values = df_cosine_score.max(axis=1)
+
+    new_df = pd.DataFrame(
+        {
+            "based": df_cosine_score.index.tolist(),
+            "compared": max_column_index,
+            "max_score": max_values,
+        }
+    )
+
+    # Rank cosine similarity scores from the highest to the lowest
+    new_df.sort_values(by="max_score", ascending=False, inplace=True)
+    new_df = new_df.reset_index(drop=True)
 
     return new_df
