@@ -556,7 +556,10 @@ def compute_chrf(
 
 
 def generate_config_translation(
-    models_path: str, target_translation: str, enable_gpu: bool = False
+    models_path: str,
+    target_translation: str,
+    translate_extra: TranslateExtra,
+    enable_gpu: bool = False,
 ) -> tuple:
     """
     Generate translation configuration files for a list of models.
@@ -564,6 +567,7 @@ def generate_config_translation(
     Args:
         models_path (str): The path to the directory containing model files.
         target_translation (str): The target language for translation.
+        translate_extra (TranslateExtra): Receiving TranslateExtra dataclass, which is the translation debug configuration.
         enable_gpu (bool, optional): If True, enable GPU acceleration. Default is False.
 
     Returns:
@@ -584,7 +588,6 @@ def generate_config_translation(
         translate_essential = TranslateEssential(
             model=model, src=target_translation, verbose=True, enable_gpu=enable_gpu
         )
-        translate_extra = TranslateExtra()
         config_loc = f"{saved_config_on}/{Path(target_translation).name}_TRANSLATE_{Path(model).name}.yaml"
         config_paths.append(config_loc)
         saved_logs.append(f"{translate_essential.saved_dir}.log")
@@ -694,6 +697,7 @@ def perform_models_translation(
     tobe_translated: str,
     translated_target: str,
     subword_target_model: str,
+    translate_extra: TranslateExtra,
     enable_gpu: bool = False,
 ) -> pd.DataFrame:
     """
@@ -704,6 +708,7 @@ def perform_models_translation(
         tobe_translated (str): The source sentence to be translated.
         translated_target (str): The original translated target sentence.
         subword_target_model (str): The subword target model used for desubwording.
+        translate_extra (TranslateExtra): Receiving TranslateExtra dataclass, which is the translation debug configuration.
         enable_gpu (bool, optional): If True, enable GPU acceleration. Default is False.
 
     Returns:
@@ -715,6 +720,7 @@ def perform_models_translation(
             models_path="/path/to/models",
             tobe_translated="/path/to/source_sentences",
             translated_target="/path/to/target_sentences"",
+            translate_extra="instance_of_TranslateExtra_dataclass",
             subword_target_model="/path/to/subword_model",
         )
     """
@@ -722,6 +728,7 @@ def perform_models_translation(
     config_paths, saved_logs, save_translated, models_l = generate_config_translation(
         models_path=models_path,
         target_translation=tobe_translated,
+        translate_extra=translate_extra,
         enable_gpu=enable_gpu,
     )
 
