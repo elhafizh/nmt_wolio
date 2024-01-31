@@ -423,6 +423,9 @@ class TranslateExtra:
         align_debug (bool, optional): If True, print the best alignment for each word. Defaults to False.
         with_score (bool, optional): If True, add a tab-separated score to the translation. Defaults to False.
         torch_profile (bool, optional): If True, report PyTorch profiling stats. Defaults to False.
+        beam_size (int, optional): If beam size is 5, means the model considers the top 5 most likely next words at each decoding step.
+                                   If beam size is 1, means the model only considers the most likely next word at each step.
+                                        This is also known as greedy decoding
         dump_beam (str, optional): File to dump beam information to. Defaults to "".
         n_best (int, optional): If verbose is set, output the n_best decoded sentences. Defaults to 1.
 
@@ -435,6 +438,7 @@ class TranslateExtra:
     align_debug: bool = False
     with_score: bool = False
     torch_profile: bool = False
+    beam_size: int = 5
     dump_beam: str = ""
     n_best: int = 1
 
@@ -447,7 +451,8 @@ class TranslateExtra:
         config = config + f"align_debug: {bool_yaml(self.align_debug)}\n"
         config = config + f"with_score: {bool_yaml(self.with_score)}\n"
         config = config + f"profile: {bool_yaml(self.torch_profile)}\n"
-        config = config + f"# dump_beam: {self.dump_beam}\n"
+        config = config + f"beam_size: {self.beam_size}\n"
+        config = config + f"dump_beam: {self.dump_beam}\n"
         config = config + f"n_best: {self.n_best}\n"
         self.config = config
 
