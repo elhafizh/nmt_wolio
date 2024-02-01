@@ -398,7 +398,10 @@ class TranslateEssential:
             config = config + f"output: {self.saved_dir}\n"
         config = config + f"min_length: {self.min_length}\n"
         config = config + f"verbose: {bool_yaml(self.verbose)}\n"
-        config = config + f"# tgt: {self.tgt}\n"
+        if self.tgt:
+            config = config + f"tgt: {self.tgt}\n"
+        else:
+            config = config + f"# tgt: {self.tgt}\n"
         if not self.enable_gpu:
             config = config + f"# gpu: 0\n"
         else:
@@ -452,7 +455,10 @@ class TranslateExtra:
         config = config + f"with_score: {bool_yaml(self.with_score)}\n"
         config = config + f"profile: {bool_yaml(self.torch_profile)}\n"
         config = config + f"beam_size: {self.beam_size}\n"
-        config = config + f"dump_beam: {self.dump_beam}\n"
+        if self.dump_beam:
+            config = config + f"dump_beam: {self.dump_beam}\n"
+        else:
+            config = config + f"# dump_beam: {self.dump_beam}\n"
         config = config + f"n_best: {self.n_best}\n"
         self.config = config
 
@@ -559,6 +565,7 @@ def generate_config_translation(
     models_path: str,
     target_translation: str,
     translate_extra: TranslateExtra,
+    translated_target: str = "",
     enable_gpu: bool = False,
 ) -> tuple:
     """
@@ -568,6 +575,7 @@ def generate_config_translation(
         models_path (str): The path to the directory containing model files.
         target_translation (str): The target language for translation.
         translate_extra (TranslateExtra): Receiving TranslateExtra dataclass, which is the translation debug configuration.
+        translated_target (str): The original translated target sentence.
         enable_gpu (bool, optional): If True, enable GPU acceleration. Default is False.
 
     Returns:
@@ -585,9 +593,18 @@ def generate_config_translation(
     utils.create_folder_if_not_exists(saved_config_on)
     for model in tqdm(models_l, desc="generate_config_translation()"):
         # generate translation config
-        translate_essential = TranslateEssential(
-            model=model, src=target_translation, verbose=True, enable_gpu=enable_gpu
-        )
+        if translated_target:
+            translate_essential = TranslateEssential(
+                model=model,
+                src=target_translation,
+                tgt=translated_target,
+                verbose=True,
+                enable_gpu=enable_gpu,
+            )
+        else:
+            translate_essential = TranslateEssential(
+                model=model, src=target_translation, verbose=True, enable_gpu=enable_gpu
+            )
         config_loc = f"{saved_config_on}/{Path(target_translation).name}_TRANSLATE_{Path(model).name}.yaml"
         config_paths.append(config_loc)
         saved_logs.append(f"{translate_essential.saved_dir}.log")
@@ -595,6 +612,16 @@ def generate_config_translation(
         utils.write_to_file(
             config_loc, generateTrainingConfig(translate_essential, translate_extra)
         )
+
+    # sort based on steps value
+    config_paths = sorted(
+        config_paths, key=lambda x: int(x.split("_")[-1].split(".")[0])
+    )
+    saved_logs = sorted(saved_logs, key=lambda x: int(x.split("_")[-1].split(".")[0]))
+    save_translated = sorted(
+        save_translated, key=lambda x: int(x.split("_")[-1].split(".")[0])
+    )
+    models_l = sorted(models_l, key=lambda x: int(x.split("_")[-1].split(".")[0]))
 
     return config_paths, saved_logs, save_translated, models_l
 
@@ -729,6 +756,7 @@ def perform_models_translation(
         models_path=models_path,
         target_translation=tobe_translated,
         translate_extra=translate_extra,
+        translated_target=translated_target,
         enable_gpu=enable_gpu,
     )
 
