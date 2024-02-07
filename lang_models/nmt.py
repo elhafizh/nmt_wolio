@@ -852,7 +852,7 @@ def gather_sentence_evaluation(target_pred_dir: str, target_test: str):
     )
 
     # sort in ascending order
-    file_list = sorted(file_list)
+    file_list = sorted(file_list, key=lambda x: int(x.split("_")[-1].split(".")[0]))
 
     # Create full paths for the filtered files
     file_list = [f"{target_pred_dir}/{file}" for file in file_list]
