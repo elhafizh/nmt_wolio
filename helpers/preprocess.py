@@ -413,16 +413,26 @@ def count_sentence_length(df: pd.DataFrame, column: str, limit: int):
         Total sentences less than or equal to <limit> words: The total count of sentences less than or equal to the limit across all rows.
     """
 
+    counter = {}
+    counter['lot'] = []
+    counter['lte'] = []
+
     def check_out(text: str):
         sentences = nltk.sent_tokenize(text)
         lot = sum(1 for sentence in sentences if len(sentence.split()) > limit)
         lte = sum(1 for sentence in sentences if len(sentence.split()) <= limit)
+        counter['lot'].append(lot)
+        counter['lte'].append(lte)
         return lot, lte
 
+    tqdm.pandas(desc="count_sentence_length()")
+
     new_df = df[[column]].copy()
-    new_df[[f"longer_than_{limit}", f"less_than_{limit}"]] = (
-        df[column].apply(check_out).apply(pd.Series)
-    )
+
+    df[column].progress_apply(check_out)
+
+    new_df[f"longer_than_{limit}"] = counter['lot']
+    new_df[f"less_than_{limit}"] = counter['lte']
 
     # Calculate total counts across all rows
     total_lot = new_df[f"longer_than_{limit}"].sum()
