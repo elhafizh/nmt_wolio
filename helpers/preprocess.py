@@ -177,6 +177,9 @@ def sentence_subwording(
 
     print("Done subwording the source dataset! Output:", source_subworded)
 
+    del sp
+    sp = spm.SentencePieceProcessor()
+
     # Subwording the train target
     sp.load(target_model)
     with open(target_raw, encoding="utf-8") as target, open(
