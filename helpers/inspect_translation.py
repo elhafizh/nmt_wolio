@@ -69,3 +69,31 @@ def count_sentences_in_bins(
     bin_counts = bin_counts.set_index("bin").reindex(desired_index_order).reset_index()
 
     return df, bin_counts
+
+
+def average_length_by_bin(
+    df: pd.DataFrame, sentence_column: str, bin_column: str
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Calculate the average length of sentences in a DataFrame grouped by a specified bin column.
+
+    Args:
+        df (pd.DataFrame): The input DataFrame containing sentences.
+        sentence_column (str): The name of the column in the DataFrame that contains sentences.
+        bin_column (str): The name of the column to group by for calculating the average sentence length.
+
+    Returns:
+        Tuple[pd.DataFrame, pd.DataFrame]: A tuple containing:
+            - The original DataFrame with an additional column for sentence lengths.
+            - A DataFrame with the average sentence length for each bin, rounded to the nearest integer.
+    """
+    # Calculate the length of each sentence
+    sent_len = lambda sentence: len(sentence.split())
+    df[f"{sentence_column}_len"] = df[sentence_column].apply(sent_len)
+
+    # Group by 'bin' and calculate the average length
+    avg_len = df.groupby(bin_column)[f"{sentence_column}_len"].mean().reset_index()
+    rnd_val = lambda val: round(val)
+    avg_len[f"{sentence_column}_len"] = avg_len[f"{sentence_column}_len"].apply(rnd_val)
+
+    return df, avg_len
