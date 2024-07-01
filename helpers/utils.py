@@ -457,3 +457,29 @@ def create_excel_with_multiple_sheets(
         raise ValueError(
             "Invalid sheet_names. Please provide an integer or a list of strings."
         )
+
+
+def check_duplicates_on_column(
+    df: pd.DataFrame, columns: List[str], delete_duplicates: bool = False
+) -> pd.DataFrame:
+    """
+    Checks for duplicates in the specified DataFrame based on the provided columns.
+
+    Args:
+        df (pd.DataFrame): The pandas DataFrame to check for duplicates.
+        columns (List[str]): A list of column names to consider for identifying duplicates.
+        delete_duplicates (bool, optional): If True, deletes the duplicate rows from the DataFrame.
+            If False, returns the DataFrame subset containing only the duplicate rows. Defaults to False.
+
+    Returns:
+        pd.DataFrame: If delete_duplicates is True, returns the DataFrame with duplicates removed.
+            If delete_duplicates is False, returns a DataFrame subset containing only the duplicate rows.
+    """
+    duplicates = df.duplicated(subset=columns)
+    duplicate_indices = df.index[duplicates].tolist()
+    print(f"total duplicates = {len(duplicate_indices)}")
+    if delete_duplicates:
+        df.drop(duplicate_indices, inplace=True)
+        return df
+    else:
+        return df[duplicates]

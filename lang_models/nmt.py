@@ -398,7 +398,10 @@ class TranslateEssential:
             config = config + f"output: {self.saved_dir}\n"
         config = config + f"min_length: {self.min_length}\n"
         config = config + f"verbose: {bool_yaml(self.verbose)}\n"
-        config = config + f"# tgt: {self.tgt}\n"
+        if self.tgt:
+            config = config + f"tgt: {self.tgt}\n"
+        else:
+            config = config + f"# tgt: {self.tgt}\n"
         if not self.enable_gpu:
             config = config + f"# gpu: 0\n"
         else:
@@ -423,6 +426,9 @@ class TranslateExtra:
         align_debug (bool, optional): If True, print the best alignment for each word. Defaults to False.
         with_score (bool, optional): If True, add a tab-separated score to the translation. Defaults to False.
         torch_profile (bool, optional): If True, report PyTorch profiling stats. Defaults to False.
+        beam_size (int, optional): If beam size is 5, means the model considers the top 5 most likely next words at each decoding step.
+                                   If beam size is 1, means the model only considers the most likely next word at each step.
+                                        This is also known as greedy decoding
         dump_beam (str, optional): File to dump beam information to. Defaults to "".
         n_best (int, optional): If verbose is set, output the n_best decoded sentences. Defaults to 1.
 
@@ -435,6 +441,7 @@ class TranslateExtra:
     align_debug: bool = False
     with_score: bool = False
     torch_profile: bool = False
+    beam_size: int = 5
     dump_beam: str = ""
     n_best: int = 1
 
@@ -447,7 +454,11 @@ class TranslateExtra:
         config = config + f"align_debug: {bool_yaml(self.align_debug)}\n"
         config = config + f"with_score: {bool_yaml(self.with_score)}\n"
         config = config + f"profile: {bool_yaml(self.torch_profile)}\n"
-        config = config + f"# dump_beam: {self.dump_beam}\n"
+        config = config + f"beam_size: {self.beam_size}\n"
+        if self.dump_beam:
+            config = config + f"dump_beam: {self.dump_beam}\n"
+        else:
+            config = config + f"# dump_beam: {self.dump_beam}\n"
         config = config + f"n_best: {self.n_best}\n"
         self.config = config
 
@@ -551,7 +562,11 @@ def compute_chrf(
 
 
 def generate_config_translation(
-    models_path: str, target_translation: str, enable_gpu: bool = False
+    models_path: str,
+    target_translation: str,
+    translate_extra: TranslateExtra,
+    translated_target: str = "",
+    enable_gpu: bool = False,
 ) -> tuple:
     """
     Generate translation configuration files for a list of models.
@@ -559,6 +574,8 @@ def generate_config_translation(
     Args:
         models_path (str): The path to the directory containing model files.
         target_translation (str): The target language for translation.
+        translate_extra (TranslateExtra): Receiving TranslateExtra dataclass, which is the translation debug configuration.
+        translated_target (str): The original translated target sentence.
         enable_gpu (bool, optional): If True, enable GPU acceleration. Default is False.
 
     Returns:
@@ -576,10 +593,18 @@ def generate_config_translation(
     utils.create_folder_if_not_exists(saved_config_on)
     for model in tqdm(models_l, desc="generate_config_translation()"):
         # generate translation config
-        translate_essential = TranslateEssential(
-            model=model, src=target_translation, verbose=True, enable_gpu=enable_gpu
-        )
-        translate_extra = TranslateExtra()
+        if translated_target:
+            translate_essential = TranslateEssential(
+                model=model,
+                src=target_translation,
+                tgt=translated_target,
+                verbose=True,
+                enable_gpu=enable_gpu,
+            )
+        else:
+            translate_essential = TranslateEssential(
+                model=model, src=target_translation, verbose=True, enable_gpu=enable_gpu
+            )
         config_loc = f"{saved_config_on}/{Path(target_translation).name}_TRANSLATE_{Path(model).name}.yaml"
         config_paths.append(config_loc)
         saved_logs.append(f"{translate_essential.saved_dir}.log")
@@ -587,6 +612,16 @@ def generate_config_translation(
         utils.write_to_file(
             config_loc, generateTrainingConfig(translate_essential, translate_extra)
         )
+
+    # sort based on steps value
+    config_paths = sorted(
+        config_paths, key=lambda x: int(x.split("_")[-1].split(".")[0])
+    )
+    saved_logs = sorted(saved_logs, key=lambda x: int(x.split("_")[-1].split(".")[0]))
+    save_translated = sorted(
+        save_translated, key=lambda x: int(x.split("_")[-1].split(".")[0])
+    )
+    models_l = sorted(models_l, key=lambda x: int(x.split("_")[-1].split(".")[0]))
 
     return config_paths, saved_logs, save_translated, models_l
 
@@ -689,6 +724,7 @@ def perform_models_translation(
     tobe_translated: str,
     translated_target: str,
     subword_target_model: str,
+    translate_extra: TranslateExtra,
     enable_gpu: bool = False,
 ) -> pd.DataFrame:
     """
@@ -699,6 +735,7 @@ def perform_models_translation(
         tobe_translated (str): The source sentence to be translated.
         translated_target (str): The original translated target sentence.
         subword_target_model (str): The subword target model used for desubwording.
+        translate_extra (TranslateExtra): Receiving TranslateExtra dataclass, which is the translation debug configuration.
         enable_gpu (bool, optional): If True, enable GPU acceleration. Default is False.
 
     Returns:
@@ -710,6 +747,7 @@ def perform_models_translation(
             models_path="/path/to/models",
             tobe_translated="/path/to/source_sentences",
             translated_target="/path/to/target_sentences"",
+            translate_extra="instance_of_TranslateExtra_dataclass",
             subword_target_model="/path/to/subword_model",
         )
     """
@@ -717,6 +755,8 @@ def perform_models_translation(
     config_paths, saved_logs, save_translated, models_l = generate_config_translation(
         models_path=models_path,
         target_translation=tobe_translated,
+        translate_extra=translate_extra,
+        translated_target=translated_target,
         enable_gpu=enable_gpu,
     )
 
@@ -812,7 +852,7 @@ def gather_sentence_evaluation(target_pred_dir: str, target_test: str):
     )
 
     # sort in ascending order
-    file_list = sorted(file_list)
+    file_list = sorted(file_list, key=lambda x: int(x.split("_")[-1].split(".")[0]))
 
     # Create full paths for the filtered files
     file_list = [f"{target_pred_dir}/{file}" for file in file_list]
