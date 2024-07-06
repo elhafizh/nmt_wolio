@@ -58,3 +58,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+    # HowTo on CLI
+    # python average_models.py -models model_step_xxx.pt model_step_yyy.pt -output model_avg.pt
