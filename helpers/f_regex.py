@@ -112,6 +112,8 @@ def remove_parentheses_from_dataframe(df):
         pd.DataFrame: A DataFrame with text within parentheses removed from each element.
     """
     def remove_parentheses(text):
+        if not isinstance(text, (str, bytes)):
+            text = str(text)
         return re.sub(r'\(.*?\)', '', text).strip()
     
     return df.applymap(remove_parentheses)
