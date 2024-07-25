@@ -483,3 +483,24 @@ def check_duplicates_on_column(
         return df
     else:
         return df[duplicates]
+
+
+def search_str_in_df(df: pd.DataFrame, search_string: str) -> pd.DataFrame:
+    """
+    Searches for a string in a DataFrame and returns rows containing the string.
+
+    Args:
+        df (DataFrame): The DataFrame to search within.
+        search_string (str): The string to search for in the DataFrame.
+
+    Returns:
+        DataFrame: A DataFrame containing rows where the search string was found.
+    """
+
+    # find rows that contain the search string
+    mask = df.apply(
+        lambda row: row.astype(str).str.contains(search_string, case=False).any(),
+        axis=1,
+    )
+
+    return df[mask]
