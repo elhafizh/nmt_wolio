@@ -140,3 +140,39 @@ def find_closest_translations(
         top_matches = distance_df.sort_values("distance")
 
     return top_matches
+
+
+def word_to_word_translation(
+    sentence: str,
+    dictionaries: pd.DataFrame,
+    source: str = "indonesia",
+    target: str = "wolio",
+    unknown: str = "<unk>",
+) -> str:
+    """
+    Translate a sentence word by word using a dictionary DataFrame.
+
+    Args:
+        sentence (str): The sentence to translate.
+        dictionaries (pd.DataFrame): A DataFrame containing source and target language columns.
+        source (str, optional): The source language column name in the DataFrame.
+        target (str, optional): The target language column name in the DataFrame.
+        unknown (str, optional): The string to use for unknown words.
+
+    Returns:
+        str: The translated sentence.
+    """
+
+    words = sentence.split()
+    translated_words = []
+
+    for word in words:
+        if word in dictionaries[source].values:
+            translated_word = dictionaries.loc[
+                dictionaries[source] == word, target
+            ].values[0]
+        else:
+            translated_word = unknown
+        translated_words.append(translated_word)
+
+    return " ".join(translated_words)
