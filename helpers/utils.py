@@ -483,3 +483,43 @@ def check_duplicates_on_column(
         return df
     else:
         return df[duplicates]
+
+
+def search_str_in_df(df: pd.DataFrame, search_string: str) -> pd.DataFrame:
+    """
+    Searches for a string in a DataFrame and returns rows containing the string.
+
+    Args:
+        df (DataFrame): The DataFrame to search within.
+        search_string (str): The string to search for in the DataFrame.
+
+    Returns:
+        DataFrame: A DataFrame containing rows where the search string was found.
+    """
+
+    # find rows that contain the search string
+    mask = df.apply(
+        lambda row: row.astype(str).str.contains(search_string, case=False).any(),
+        axis=1,
+    )
+
+    return df[mask]
+
+
+def remove_string_from_column(
+    df: pd.DataFrame, column_name: str, string_to_remove: str, regex: bool = False
+) -> pd.DataFrame:
+    """
+    Removes a specific string from a specified column in a Pandas DataFrame.
+
+    Args:
+        df (pd.DataFrame): The DataFrame to modify.
+        column_name (str): The name of the column from which to remove the string.
+        string_to_remove (str): The string to be removed.
+        regex (bool, optional): Whether to treat the string as a regular expression. Default is False.
+
+    Returns:
+        pd.DataFrame: The modified DataFrame with the string removed from the specified column.
+    """
+    df[column_name] = df[column_name].str.replace(string_to_remove, "", regex=regex)
+    return df

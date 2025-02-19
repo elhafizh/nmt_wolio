@@ -1,5 +1,6 @@
 from typing import Tuple
 
+import Levenshtein
 import pandas as pd
 
 
@@ -97,3 +98,81 @@ def average_length_by_bin(
     avg_len[f"{sentence_column}_len"] = avg_len[f"{sentence_column}_len"].apply(rnd_val)
 
     return df, avg_len
+
+
+def find_closest_translations(
+    word: str,
+    dictionaries: pd.DataFrame,
+    top_n: int = 3,
+    source: str = "indonesia",
+    target: str = "wolio",
+) -> pd.DataFrame:
+    """
+    Find the closest translations for a given word based on Levenshtein distance.
+
+    Args:
+        word (str): The word to find translations for.
+        dictionaries (pd.DataFrame): A DataFrame containing source and target language columns.
+        top_n (int, optional): The number of closest matches to return. Defaults to 3.
+                               Set to 0 to return all matches.
+        source (str, optional): The source language column name in the DataFrame.
+        target (str, optional): The target language column name in the DataFrame.
+
+    Returns:
+        pd.DataFrame: A DataFrame containing the closest translations with their distances.
+    """
+
+    # Calculate Levenshtein distances
+    distances = dictionaries[source].apply(lambda x: Levenshtein.distance(word, x))
+
+    distance_df = pd.DataFrame(
+        {
+            f"{source}": dictionaries[source],
+            f"{target}": dictionaries[target],
+            "distance": distances,
+        }
+    )
+
+    # get the top N matches
+    if top_n > 0:
+        top_matches = distance_df.sort_values("distance").head(top_n)
+    else:
+        top_matches = distance_df.sort_values("distance")
+
+    return top_matches
+
+
+def word_to_word_translation(
+    sentence: str,
+    dictionaries: pd.DataFrame,
+    source: str = "indonesia",
+    target: str = "wolio",
+    unknown: str = "<unk>",
+) -> str:
+    """
+    Translate a sentence word by word using a dictionary DataFrame.
+
+    Args:
+        sentence (str): The sentence to translate.
+        dictionaries (pd.DataFrame): A DataFrame containing source and target language columns.
+        source (str, optional): The source language column name in the DataFrame.
+        target (str, optional): The target language column name in the DataFrame.
+        unknown (str, optional): The string to use for unknown words.
+
+    Returns:
+        str: The translated sentence.
+    """
+
+    words = sentence.split()
+    translated_words = []
+
+    for word in words:
+        if word in dictionaries[source].values:
+            translated_word = dictionaries.loc[
+                dictionaries[source] == word, target
+            ].values[0]
+        else:
+            translated_word = unknown
+        translated_words.append(translated_word)
+
+    return " ".join(translated_words)
