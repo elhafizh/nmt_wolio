@@ -864,3 +864,31 @@ def gather_sentence_evaluation(target_pred_dir: str, target_test: str):
         l_df.append(df)
 
     return l_df, file_list
+
+
+def model_conversion(source_model: str, output_model: str, quantization: str = ""):
+    """
+    Converts an OpenNMT model to CTranslate2 format.
+
+    Args:
+        source_model (str): The path to the source OpenNMT model.
+        output_model (str): The path where the converted CTranslate2 model will be saved.
+        quantization (str, optional): The quantization option for model conversion. Default is an empty string.
+            Quantization options can be seen here: https://opennmt.net/CTranslate2/quantization.html#quantize-on-model-conversion
+
+    Example:
+        model_conversion("/path/to/source/model.pt", "/path/to/output/model", "int8")
+    """
+    commands = [
+        "ct2-opennmt-py-converter",
+        "--model_path",
+        source_model,
+        "--output",
+        output_model,
+    ]
+
+    if quantization:
+        commands.append("--quantization")
+        commands.append(quantization)
+
+    utils.execute_cmd(commands)
